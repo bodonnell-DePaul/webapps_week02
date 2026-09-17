@@ -1,0 +1,14 @@
+# TTL countdown: docs.github.com (zone TTL 30) via 8.8.8.8
+# One query every 6 seconds. Watch the number fall, then reset.
+
+19:50:21Z  docs.github.com.	30	IN	A	185.199.109.154
+19:50:27Z  docs.github.com.	24	IN	A	185.199.109.154
+19:50:33Z  docs.github.com.	30	IN	A	185.199.109.154
+19:50:39Z  docs.github.com.	30	IN	A	185.199.111.154
+19:50:45Z  docs.github.com.	30	IN	A	185.199.109.154
+19:50:51Z  docs.github.com.	18	IN	A	185.199.108.154
+19:50:57Z  docs.github.com.	12	IN	A	185.199.111.154
+19:51:03Z  docs.github.com.	30	IN	A	185.199.109.154
+19:51:09Z  docs.github.com.	30	IN	A	185.199.110.154
+19:51:15Z  docs.github.com.	30	IN	A	185.199.110.154
+19:51:21Z  docs.github.com.	12	IN	A	185.199.109.154

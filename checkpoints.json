@@ -1,0 +1,26 @@
+{
+  "week": "week02",
+  "checkpoints": [
+    {
+      "id": "w02-cp1",
+      "block": "A",
+      "minutes": 10,
+      "mode": "individual",
+      "prompt": "You changed an A record 20 minutes ago. You see the new address immediately from your laptop; a second device you own on the same wifi still shows the old one; the grader gets NXDOMAIN for the `status.` hostname you created 5 minutes ago. Explain each of the three, and name the command that settles it."
+    },
+    {
+      "id": "w02-cp2",
+      "block": "B",
+      "minutes": 10,
+      "mode": "individual",
+      "prompt": "Four zone changes: (1) point `www` at a new hosting provider; (2) move DNS from your registrar's free service to Cloudflare; (3) add a CAA record naming Let's Encrypt; (4) change the apex A record at 09:00 tomorrow. For each: which console do you open, and what is the blast radius?"
+    },
+    {
+      "id": "w02-cp3",
+      "block": "C",
+      "minutes": 10,
+      "mode": "individual",
+      "prompt": "Four symptoms from your own running system. Name the most likely cause and the ONE command that confirms it: (1) `www` returns 404 while `dig` shows the CNAME resolving correctly; (2) a client's POST returns 200 but nothing is created; (3) the browser reports too many redirects while curl against the app directly is fine; (4) logged-out users are served a page with someone else's name on it."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+# Six back-to-back queries to the SAME resolver IP (1.1.1.1).
+# Different remaining TTLs = different anycast cache nodes.
+
+depaul.edu.		86400	IN	A	64.239.109.1
+depaul.edu.		86400	IN	A	64.239.109.1
+depaul.edu.		86290	IN	A	64.239.109.1
+depaul.edu.		86400	IN	A	64.239.109.1
+depaul.edu.		86290	IN	A	64.239.109.1
+depaul.edu.		86400	IN	A	64.239.109.1

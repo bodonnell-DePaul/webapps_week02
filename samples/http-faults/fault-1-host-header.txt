@@ -1,0 +1,76 @@
+################################################################################
+# FAULT 1 — supplied artifact for HW2, Task 6
+#
+# Ticket: "We pointed www at the platform four hours ago. dig agrees. The apex
+#          works. www returns 404. The DNS must not have propagated yet."
+#
+# Captured from: weeks/week02/samples/http-faults/fault-server.mjs (fault 1)
+# Reproduce:     node fault-server.mjs   then run the commands below.
+################################################################################
+
+--- A. Control. The hostname the edge was configured for. ---
+$ curl -sv --resolve status.campuspulse.example:8081:127.0.0.1 \
+       http://status.campuspulse.example:8081/healthz
+  *   Trying 127.0.0.1:8081...
+  > GET /healthz HTTP/1.1
+  > Host: status.campuspulse.example:8081
+  > User-Agent: curl/8.5.0
+  > Accept: */*
+  > 
+  < HTTP/1.1 200 OK
+  < Server: campuspulse-fault-lab/1.0
+  < Content-Type: application/json
+  < Content-Length: 39
+  < Vary: Accept-Encoding
+  < Date: Sat, 15 Aug 2026 19:57:46 GMT
+  < Connection: keep-alive
+  < Keep-Alive: timeout=5
+  < 
+  { [39 bytes data]
+  {"status":"ok","service":"campuspulse"}
+
+--- B. The report. Same IP. Same port. Same TCP stack. New Host header. ---
+$ curl -sv --resolve www.campuspulse.example:8081:127.0.0.1 \
+       http://www.campuspulse.example:8081/healthz
+  *   Trying 127.0.0.1:8081...
+  > GET /healthz HTTP/1.1
+  > Host: www.campuspulse.example:8081
+  > User-Agent: curl/8.5.0
+  > Accept: */*
+  > 
+  < HTTP/1.1 404 Not Found
+  < Server: campuspulse-fault-lab/1.0
+  < Content-Type: text/plain
+  < Content-Length: 128
+  < X-Served-By: shared-edge-7
+  < Date: Sat, 15 Aug 2026 19:57:46 GMT
+  < Connection: keep-alive
+  < Keep-Alive: timeout=5
+  < 
+  { [128 bytes data]
+  404 Not Found
+  
+  This shared edge has no site configured for the requested hostname.
+  Requested Host: www.campuspulse.example:8081
+
+--- C. Remove DNS from the experiment entirely. Dial the IP by hand. ---
+$ curl -sI http://127.0.0.1:8081/healthz -H "Host: status.campuspulse.example"
+  HTTP/1.1 200 OK
+  Server: campuspulse-fault-lab/1.0
+  Content-Type: application/json
+  Content-Length: 39
+  Vary: Accept-Encoding
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+$ curl -sI http://127.0.0.1:8081/healthz -H "Host: www.campuspulse.example"
+  HTTP/1.1 404 Not Found
+  Server: campuspulse-fault-lab/1.0
+  Content-Type: text/plain
+  Content-Length: 123
+  X-Served-By: shared-edge-7
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  

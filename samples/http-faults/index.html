@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HW2 HTTP Fault Lab - CSC 436</title>
+<link rel="stylesheet" href="../../../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../../../docs/getting-started.html">Start here</a>
+<a href="../../../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../../../docs/course-map.html">Course map</a>
+<a href="../../../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="README.md" download>Download Markdown source</a></p>
+<h1 id="hw2-http-fault-lab">HW2 HTTP Fault Lab</h1>
+<p>Three deliberately broken HTTP behaviours, each modelled on a production failure that
+happens constantly. You diagnose them from request/response evidence alone.</p>
+<p><strong>These are real, runnable faults — not descriptions of faults.</strong> Every transcript in this
+folder was captured from <code>fault-server.mjs</code> running on <code>127.0.0.1</code>. You can reproduce all
+of it, and HW2 Task 6 requires you to reproduce at least one.</p>
+<hr>
+<h2 id="running-it">Running it</h2>
+<pre><code class="language-bash">node fault-server.mjs
+</code></pre>
+<pre><code>fault1    listening on http://127.0.0.1:8081
+fault2    listening on http://127.0.0.1:8082
+fault3    listening on http://127.0.0.1:8083
+fault3-lb listening on http://127.0.0.1:8084
+</code></pre>
+<p>Ports busy? <code>node fault-server.mjs --port 9100</code> moves everything to 9100–9103.</p>
+<p>For concurrent automated checks, use <strong><code>node fault-server.mjs --port 0</code></strong>.
+Each of the four listeners asks the OS for its own available loopback port;
+they are <strong>not</strong> assumed adjacent. After all four are listening, the process
+prints one machine-readable <code>PORTS</code> line with the keys <code>fault1</code>, <code>fault2</code>,
+<code>fault3</code>, and <code>proxy</code>. Use those actual values in requests and <code>--resolve</code>
+arguments. The proxy targets the actual <code>fault3</code> port, and redirect URLs use
+the actual listener ports. No arguments still means 8081–8084; a nonzero
+<code>--port N</code> still means N through N+3, so N must not exceed 65532.</p>
+<p>A bind failure prints its error and exits nonzero, closing any listeners this
+process already started. It never stops another process to free a port.</p>
+<p><strong>Requirements:</strong> Node 18 or later. No dependencies, no <code>npm install</code>. The server binds
+<code>127.0.0.1</code> only — nothing is exposed to your network.</p>
+<hr>
+<h2 id="the-three-faults">The three faults</h2>
+<h3 id="fault-1--8081">Fault 1 — <code>:8081</code></h3>
+<blockquote>
+<p><em>&quot;We pointed <code>www</code> at the platform four hours ago. <code>dig</code> agrees. The apex works. <code>www</code>
+returns 404. The DNS must not have propagated yet.&quot;</em></p>
+</blockquote>
+<p>Artifact: <a href="fault-1-host-header.txt"><code>fault-1-host-header.txt</code></a> — three parts. Part C is the
+one worth studying: it removes DNS from the experiment entirely.</p>
+<h3 id="fault-2--8082">Fault 2 — <code>:8082</code></h3>
+<blockquote>
+<p><em>&quot;The homepage flashes and then the browser says the page isn&#39;t redirecting properly.&quot;</em>
+<em>&quot;Our incident-reporting POST silently stopped creating incidents after we moved the
+endpoint. No errors in the client.&quot;</em></p>
+</blockquote>
+<p>Artifact: <a href="fault-2-redirect-chain.txt"><code>fault-2-redirect-chain.txt</code></a> — three parts, <strong>two
+separate defects</strong>.</p>
+<blockquote>
+<p>⚠️ <strong>Parts B and C are the same request with one flag different, and they produce
+opposite conclusions.</strong> If your diagnosis does not account for that, you have missed the
+point of the artifact.</p>
+</blockquote>
+<h3 id="fault-3--8083-behind-8084">Fault 3 — <code>:8083</code> behind <code>:8084</code></h3>
+<blockquote>
+<p><em>&quot;Staging is fine. Production redirects forever. Nothing changed in the app. We only put
+the load balancer in front of it.&quot;</em></p>
+</blockquote>
+<p><code>:8084</code> is a stand-in for a TLS-terminating load balancer; <code>:8083</code> is the app behind it.
+The app exposes two diagnostic response headers — <code>X-App-Saw-XFP</code> and
+<code>X-App-Saw-Forwarded-Headers</code> — so you can see what it actually received.</p>
+<p>Artifact: <a href="fault-3-x-forwarded-proto.txt"><code>fault-3-x-forwarded-proto.txt</code></a> — three parts:
+through the proxy, bypassing the proxy, and bypassing the proxy with one header added by
+hand.</p>
+<blockquote>
+<p><strong>Real apps do not expose <code>X-App-Saw-*</code> headers.</strong> They are here so you can learn the
+reasoning. In production you get the same information by logging received headers at the
+app, or by using part B&#39;s technique: request the app <em>directly</em>, behind the proxy.</p>
+</blockquote>
+<hr>
+<h2 id="what-hw2-task-6-asks-for">What HW2 Task 6 asks for</h2>
+<p>For <strong>each</strong> fault, four things:</p>
+<ol>
+<li><strong>The annotated request/response pair</strong> — the specific lines carrying the evidence,
+with your annotation on each.</li>
+<li><strong>The diagnosis</strong> — one or two sentences naming the actual cause.</li>
+<li><strong>The confirming command</strong> — the single command that distinguishes your diagnosis from
+the next most plausible one, and the result that would confirm it.</li>
+<li><strong>The fix</strong> — what you would change, and where: app, proxy, or DNS.</li>
+</ol>
+<p>Plus: reproduce <strong>at least one</strong> fault yourself and include your own capture.</p>
+<hr>
+<h2 id="useful-commands">Useful commands</h2>
+<pre><code class="language-bash"># Set the Host header by hand against a literal address.
+curl -sI http://127.0.0.1:8081/healthz -H &quot;Host: status.campuspulse.example&quot;
+
+# Map a hostname to an address for this request only. This is the honest way
+# to test a name before you point DNS at it.
+curl -sv --resolve www.campuspulse.example:8081:127.0.0.1 \
+  http://www.campuspulse.example:8081/healthz
+
+# Follow redirects, cap them, and show the error. -S matters: plain -s hides it.
+curl -sSIL --max-redirs 5 http://campuspulse.example:8082/ ; echo &quot;exit=$?&quot;
+
+# Send a body and let curl choose the method. Do NOT add -X here.
+curl -sv -L -d &#39;{&quot;service&quot;:&quot;library-wifi&quot;}&#39; -H &#39;Content-Type: application/json&#39; \
+  http://campuspulse.example:8082/legacy/incidents
+
+# Speak HTTP by hand. Connection: close, or nc will sit there.
+printf &#39;GET /healthz HTTP/1.1\r\nHost: status.campuspulse.example\r\nConnection: close\r\n\r\n&#39; \
+  | nc 127.0.0.1 8081
+</code></pre>
+<p><strong>Windows without <code>nc</code>:</strong> the PowerShell <code>TcpClient</code> block in <a href="../../lab.html"><code>../../lab.md</code></a>
+Part 5.2 does the same job with no extra tooling.</p>
+<hr>
+<h2 id="a-hint-that-is-not-a-spoiler">A hint that is not a spoiler</h2>
+<p>Every one of these three is diagnosed the same way: <strong>change exactly one variable per
+command, and read what the server actually received rather than what you meant to send.</strong></p>
+<p>In <code>curl -v</code> output, <code>&gt;</code> lines are what your client sent and <code>&lt;</code> lines are what the server
+returned. <code>*</code> lines are curl narrating its own behaviour — and in one of these artifacts,
+curl&#39;s narration and curl&#39;s behaviour disagree.</p>
+<hr>
+<h2 id="files">Files</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>File</th><th>What it is</th></tr></thead><tbody><tr><td><code>fault-server.mjs</code></td><td>The server. Read it <em>after</em> you have diagnosed the faults, not before.</td></tr><tr><td><code>fault-1-host-header.txt</code></td><td>Fault 1 evidence</td></tr><tr><td><code>fault-2-redirect-chain.txt</code></td><td>Fault 2 evidence</td></tr><tr><td><code>fault-3-x-forwarded-proto.txt</code></td><td>Fault 3 evidence</td></tr></tbody></table></div>
+<blockquote>
+<p><strong>Instructors:</strong> diagnoses and grading notes are in
+<code>../../instructor-guide.md</code> (provided separately by the instructor), not here.</p>
+</blockquote>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

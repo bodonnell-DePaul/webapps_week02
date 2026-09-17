@@ -1,0 +1,13 @@
+# Windows OS resolver cache — the hop BEFORE the recursive resolver.
+# PS> Clear-DnsClientCache
+# PS> Resolve-DnsName docs.github.com -Type A | Out-Null
+# PS> 1..6 | ForEach-Object { Get-DnsClientCache -Entry docs.github.com; Start-Sleep 5 }
+
+19:52:43Z  docs.github.com      TTL=  30  185.199.110.154
+19:52:48Z  docs.github.com      TTL=  24  185.199.110.154
+19:52:53Z  docs.github.com      TTL=  19  185.199.110.154
+19:52:58Z  docs.github.com      TTL=  14  185.199.110.154
+19:53:03Z  docs.github.com      TTL=   9  185.199.110.154
+19:53:08Z  docs.github.com      TTL=   4  185.199.110.154
+
+# After eviction, the next lookup goes back out to the recursive resolver.

@@ -1,0 +1,14 @@
+### 1.1.1.1
+www.microsoft.com.	3584	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 884 IN CNAME	e13678.dscb.akamaiedge.net.
+e13678.dscb.akamaiedge.net. 4	IN	A	23.0.194.92
+
+### 8.8.8.8
+www.microsoft.com.	1494	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 227 IN CNAME	e13678.dscb.akamaiedge.net.
+e13678.dscb.akamaiedge.net. 20	IN	A	23.0.194.92
+
+### 9.9.9.9
+www.microsoft.com.	2061	IN	CNAME	www.microsoft.com-c-3.edgekey.net.
+www.microsoft.com-c-3.edgekey.net. 110 IN CNAME	e13678.dscb.akamaiedge.net.
+e13678.dscb.akamaiedge.net. 17	IN	A	184.28.10.89

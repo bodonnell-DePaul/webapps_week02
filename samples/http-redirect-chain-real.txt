@@ -1,0 +1,9 @@
+$ curl -sSIL https://depaul.edu/ | grep -Ei "^HTTP|^location|^server"
+HTTP/2 307 
+location: https://www.depaul.edu/
+server: Vercel
+HTTP/2 200 
+server: Vercel
+
+$ curl -sS -o /dev/null -w "%{num_redirects} redirects, final %{url_effective} (%{http_code})\n" -L https://depaul.edu/
+1 redirects, final https://www.depaul.edu/ (200)

@@ -1,0 +1,21 @@
+$ curl -sv -o /dev/null -H "accept: application/dns-json" \
+    "https://cloudflare-dns.com/dns-query?name=depaul.edu&type=A" 2>&1
+* Connected to cloudflare-dns.com (104.16.249.249) port 443
+* ALPN: curl offers h2,http/1.1
+* TLSv1.3 (OUT), TLS handshake, Client hello (1):
+* TLSv1.3 (IN), TLS handshake, Server hello (2):
+* TLSv1.3 (IN), TLS handshake, Encrypted Extensions (8):
+* TLSv1.3 (IN), TLS handshake, Certificate (11):
+* TLSv1.3 (IN), TLS handshake, CERT verify (15):
+* TLSv1.3 (IN), TLS handshake, Finished (20):
+* TLSv1.3 (OUT), TLS change cipher, Change cipher spec (1):
+* TLSv1.3 (OUT), TLS handshake, Finished (20):
+* SSL connection using TLSv1.3 / TLS_AES_256_GCM_SHA384 / X25519 / id-ecPublicKey
+* ALPN: server accepted h2
+*  subject: C=US; ST=California; L=San Francisco; O=Cloudflare, Inc.; CN=cloudflare-dns.com
+> GET /dns-query?name=depaul.edu&type=A HTTP/2
+> Host: cloudflare-dns.com
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+< HTTP/2 200 
+< content-type: application/dns-json

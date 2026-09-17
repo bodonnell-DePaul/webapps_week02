@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 2: DNS: Turning a Name into an Address — class notes - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="class-notes.md" download>Download Markdown source</a></p>
+<h1 id="week-2-dns-turning-a-name-into-an-address--class-notes">Week 2: DNS: Turning a Name into an Address — class notes</h1>
+<p>These notes contain the student-visible teaching material and examples. Complete the exercises individually. Instructor delivery notes and answer keys are not included.</p>
+<h2 id="weekly-session--dns-turning-a-name-into-an-address">Weekly session — DNS: Turning a Name into an Address</h2>
+<p>Review, preparation, logistics, teaching, individual practice, and the end-of-class brief</p>
+<h2 id="short-review">Short review</h2>
+<h3 id="recall-the-week-1-journey">Recall the Week 1 journey</h3>
+<h4 id="retrieve-the-evidence">Retrieve the evidence</h4>
+<ul>
+<li>Where did name lookup fit in a fresh visit to a website?</li>
+<li>What did the socket table reveal about &quot;works on localhost&quot;?</li>
+<li>Which observation changed your first explanation?</li>
+</ul>
+<h4 id="bring-that-method-forward">Bring that method forward</h4>
+<ul>
+<li>You control a domain or an assigned subdomain</li>
+<li>Explain what you can change and where you manage it</li>
+<li>Today: identify who answers a name lookup and who remembers the answer</li>
+</ul>
+<h2 id="prelecture-review">Prelecture review</h2>
+<h3 id="what-tonights-prep-already-told-you">What tonight&#39;s prep already told you</h3>
+<ul>
+<li><strong>You watched:</strong> the sequence of servers a query touches, stub to root to authoritative</li>
+<li><strong>You read:</strong> the recursive/authoritative distinction, the DNS record reference table, and the registrar/registry/DNS-host distinction</li>
+<li><strong>You predicted (readiness check):</strong> why a colleague sees an old value minutes after your change — &quot;propagation&quot; is not an accepted answer here</li>
+<li><strong>Today gives the mechanism:</strong> which flags prove recursive vs. iterative, and which cache is holding that old answer</li>
+<li><strong>Registrar vs. DNS host</strong> returns properly in Block B, when you edit your own zone</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>If &quot;DNS propagation&quot; was your instinct, today replaces it with a cache and a clock you can name.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="prep.html">Week 2 prep</a></li>
+</ul>
+<h2 id="weekly-logistics">Weekly logistics</h2>
+<h3 id="this-week-operationally">This week, operationally</h3>
+<ul>
+<li><strong>Tonight&#39;s lab needs your own domain.</strong> If you used the Week 1 hardship path, your delegated subdomain works exactly the same way</li>
+<li><strong>Still solo work.</strong> Your zone, your registrar login, your cutover — no shared submissions</li>
+<li><strong>Feeds Milestone 2 — Architecture.</strong> Today&#39;s zone plan and TTL decision go into it; Weeks 1–2 milestones are ungraded formative checkpoints</li>
+<li><strong>HW2 is assigned at the end of class</strong> — the brief and rubric are on the closing slides, after Block C</li>
+</ul>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="../../docs/new_syllabus.html">syllabus</a> · <a href="../../docs/course-map.html">course map</a></li>
+</ul>
+<h2 id="block-a--how-a-name-resolves">Block A — How a name resolves</h2>
+<h3 id="fictional-campuspulse-case-one-name-two-correct-answers">Fictional CampusPulse case: one name, two correct answers</h3>
+<h4 id="900-am--the-cutover">9:00 a.m. — the cutover</h4>
+<ul>
+<li>The <strong>status</strong> name moves from <code>203.0.113.10</code> to <code>.44</code></li>
+<li>Maya&#39;s campus resolver still returns <code>.10</code></li>
+<li>Luis asks <code>1.1.1.1</code> and gets <code>.44</code></li>
+</ul>
+<h4 id="907-am--inspect-the-clocks">9:07 a.m. — inspect the clocks</h4>
+<ul>
+<li>Maya&#39;s cached answer has <strong>TTL 1127</strong></li>
+<li>The public resolver&#39;s answer has <strong>TTL 58</strong></li>
+<li>Nothing is &quot;still propagating&quot;; two caches forget on different schedules</li>
+</ul>
+<h3 id="the-failure-was-a-name-with-no-address">The failure was a name with no address</h3>
+<ul>
+<li>Amazon&#39;s DynamoDB DNS automation hit a <strong>latent race condition</strong> in its <code>us-east-1</code> region</li>
+<li>The result: an <strong>empty DNS record</strong> for <code>dynamodb.us-east-1.amazonaws.com</code></li>
+<li>The automation that should have repaired it <em>could not</em>, because the record looked intentional</li>
+<li>DynamoDB errors ran 11:48 PM to 2:40 AM; the knock-on to NLB and EC2 ran until 2:20 PM</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>No server was down. No code was deployed. A name pointed at nothing, and every
+service that depended on that name pointed at nothing too.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>AWS — <a href="https://aws.amazon.com/message/101925/">Service disruption in the N. Virginia (us-east-1) Region, 19–20 October 2025</a></li>
+</ul>
+<h3 id="the-model-in-your-head-is-probably-a-phone-book">The model in your head is probably a phone book</h3>
+<ul>
+<li>A phone book is <strong>one</strong> book, held by <strong>one</strong> party, that you read <strong>once</strong></li>
+<li>DNS is a distributed database with at least four independent caches on the path</li>
+<li>Nobody holds the whole thing. Every participant knows only who to ask next</li>
+<li>There is no &quot;the&quot; answer to a name — there is <em>your</em> answer, right now, from <em>your</em> resolver</li>
+</ul>
+<blockquote>
+<p><strong>The myth we kill today</strong></p>
+<p>&quot;DNS propagation.&quot; Nothing propagates. Nothing is pushed anywhere. Records are
+<em>pulled</em> on demand and <em>cached</em> on a timer you chose.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Julia Evans — <a href="https://jvns.ca/blog/2022/04/26/new-zine--how-dns-works-/">New Zine: How DNS Works!</a></li>
+</ul>
+<h3 id="who-is-actually-in-the-conversation">Who is actually in the conversation</h3>
+<p><img src="../../assets/class-notes/week02-session-s8-1.svg" alt="Five participants in DNS resolution: the application"></p>
+<p><em>Five participants. The stub asks once; the recursive resolver does all the walking.</em></p>
+<h3 id="two-words-that-get-swapped-constantly">Two words that get swapped constantly</h3>
+<h4 id="recursive">Recursive</h4>
+<p><strong>&quot;Answer this for me.&quot;</strong></p>
+<p>Your laptop asks its resolver once and waits. It does not follow referrals.</p>
+<p><code>rd</code> = <em>recursion desired</em>.</p>
+<h4 id="iterative">Iterative</h4>
+<p><strong>&quot;Tell me who to ask next.&quot;</strong></p>
+<p>The resolver asks the root, then the TLD, then the authoritative server.</p>
+<p>Named for the service it <strong>provides</strong>, not the queries it sends.</p>
+<h3 id="three-questions-three-servers">Three questions, three servers</h3>
+<h3 id="step-1--ask-a-root-server-it-refuses-to-answer">Step 1 — ask a root server. It refuses to answer.</h3>
+<pre><code class="language-console">$ dig @a.root-servers.net depaul.edu A +norecurse
+
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 56760
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 13, ADDITIONAL: 27
+
+;; AUTHORITY SECTION:
+edu.          172800  IN  NS  a.edu-servers.net.
+edu.          172800  IN  NS  b.edu-servers.net.
+                                        ... 11 more edu. nameservers
+
+;; ADDITIONAL SECTION:
+a.edu-servers.net.  172800  IN  A     192.5.6.30
+
+;; SERVER: 198.41.0.4#53(a.root-servers.net) (UDP)
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p><code>ANSWER: 0</code> with <strong>NS in AUTHORITY</strong> is a <em>referral</em>. Flags are <code>qr</code> only — no
+<code>aa</code>, so this is not an authoritative answer.</p>
+</blockquote>
+<h3 id="step-2--ask-the-tld-it-also-refuses">Step 2 — ask the TLD. It also refuses.</h3>
+<pre><code class="language-console">$ dig @a.edu-servers.net depaul.edu A +norecurse
+
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 46795
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 4, ADDITIONAL: 5
+
+;; AUTHORITY SECTION:
+depaul.edu.   172800  IN  NS  ns1.depaul.edu.
+depaul.edu.   172800  IN  NS  ns2.depaul.edu.
+                                        ... ns3 and ns4
+
+;; ADDITIONAL SECTION:
+ns1.depaul.edu.  172800  IN  A  140.192.0.2
+
+;; SERVER: 192.5.6.30#53(a.edu-servers.net) (UDP)
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p><strong>This is the delegation.</strong> These NS records live in the <em>parent</em> zone (<code>edu.</code>),
+not in DePaul&#39;s. Changing nameservers means changing this.</p>
+</blockquote>
+<h3 id="step-3--ask-the-authoritative-server-now-you-get-an-answer">Step 3 — ask the authoritative server. Now you get an answer.</h3>
+<pre><code class="language-console">$ dig @ns1.depaul.edu depaul.edu A +norecurse
+
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NOERROR, id: 37664
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 4
+
+;; ANSWER SECTION:
+depaul.edu.   86400  IN  A   64.239.109.1
+
+;; AUTHORITY SECTION:
+depaul.edu.   14400  IN  NS  ns1.depaul.edu.
+
+;; SERVER: 140.192.0.2#53(ns1.depaul.edu) (UDP)
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p><code>aa</code> — <strong>authoritative answer</strong>. Only a server configured to hold this zone sets
+that flag. It is the end of the chain.</p>
+</blockquote>
+<h3 id="dig-trace-does-all-three-and-shows-its-work"><code>dig +trace</code> does all three, and shows its work</h3>
+<pre><code class="language-console">$ dig +trace depaul.edu A
+
+.           516715 IN NS a.root-servers.net.      &lt;- root hints
+;; Received from 1.1.1.1#53(1.1.1.1)
+
+edu.        172800 IN NS a.edu-servers.net.       &lt;- root referral
+;; Received from 192.33.4.12#53(c.root-servers.net)
+
+depaul.edu. 172800 IN NS ns1.depaul.edu.          &lt;- edu referral
+;; Received from 192.33.14.30#53(b.edu-servers.net)
+
+depaul.edu.  86400 IN A  64.239.109.1             &lt;- the answer
+;; Received from 140.192.0.2#53(ns1.depaul.edu)
+</code></pre>
+<blockquote>
+<p><strong>Tip</strong></p>
+<p>Read <code>+trace</code> bottom-up. The last <code>Received from</code> names the server that answered.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc1034.html">RFC 1034, Domain Names: Concepts and Facilities</a></li>
+</ul>
+<h3 id="who-answered-two-flags-tell-you">Who answered? Two flags tell you</h3>
+<h4 id="a-recursive-resolver">A recursive resolver</h4>
+<pre><code class="language-console">$ dig @1.1.1.1 depaul.edu A
+;; flags: qr rd ra
+depaul.edu. 85555 IN A ...
+</code></pre>
+<ul>
+<li><code>ra</code> = recursion available</li>
+<li><strong>No <code>aa</code></strong> — it is repeating</li>
+<li>TTL <code>85555</code> — <em>counting down</em></li>
+</ul>
+<h4 id="an-authoritative-server">An authoritative server</h4>
+<pre><code class="language-console">$ dig @ns1... +norecurse
+;; flags: qr aa
+depaul.edu. 86400 IN A ...
+</code></pre>
+<ul>
+<li><code>aa</code> — it holds the zone</li>
+<li><strong>No <code>ra</code></strong> — will not recurse</li>
+<li>TTL <code>86400</code> — <em>the zone value</em></li>
+</ul>
+<h3 id="nobody-forgets-on-your-schedule">Nobody forgets on your schedule</h3>
+<h3 id="four-caches-four-clocks-four-operators">Four caches, four clocks, four operators</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Cache</th><th>Who controls it</th><th>How you clear it</th></tr></thead><tbody><tr><td>Browser</td><td>The browser vendor</td><td>Restart, or <code>net-internals/#dns</code></td></tr><tr><td>OS stub cache</td><td>You, on your machine</td><td><code>ipconfig /flushdns</code></td></tr><tr><td>Recursive resolver</td><td>Your ISP, or Cloudflare</td><td><strong>You cannot.</strong> Wait.</td></tr><tr><td>CDN / edge resolver</td><td>Your CDN vendor</td><td>Vendor purge, if offered</td></tr></tbody></table></div>
+<h3 id="watch-one-cache-expire-in-real-time">Watch one cache expire, in real time</h3>
+<pre><code class="language-console">PS&gt; Clear-DnsClientCache
+PS&gt; Resolve-DnsName docs.github.com -Type A | Out-Null
+PS&gt; 1..6 | % { Get-DnsClientCache -Entry docs.github.com; sleep 5 }
+
+19:52:43Z  docs.github.com   TTL=  30   185.199.110.154
+19:52:48Z  docs.github.com   TTL=  24   185.199.110.154
+19:52:53Z  docs.github.com   TTL=  19   185.199.110.154
+19:52:58Z  docs.github.com   TTL=  14   185.199.110.154
+19:53:03Z  docs.github.com   TTL=   9   185.199.110.154
+19:53:08Z  docs.github.com   TTL=   4   185.199.110.154
+
+# at TTL=0 the entry is evicted and the next lookup leaves the machine
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The TTL is not a hint and not a target. It is a countdown that started the moment
+this cache was filled, and nothing you do at your DNS host restarts it.</p>
+</blockquote>
+<h3 id="macos-observe-a-native-lookup">macOS: observe a native lookup</h3>
+<pre><code class="language-bash">dscacheutil -q host -a name docs.github.com
+dns-sd -G v4 docs.github.com
+# Ctrl+C after an Add row, or if no result appears after 10 s.
+sleep 5
+dns-sd -G v4 docs.github.com
+# Ctrl+C again after recording the address and TTL.
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>dns-sd reports the native resolver&#39;s address and TTL. This is an active lookup, not a dump of every cached record.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Apple — <a href="https://github.com/apple-oss-distributions/mDNSResponder/blob/main/Clients/dns-sd.c">dns-sd implementation and address/TTL output</a></li>
+</ul>
+<h3 id="run-it-watch-this-machines-dns-cache">Run it: watch this machine&#39;s DNS cache</h3>
+<pre><code class="language-powershell">Resolve-DnsName docs.github.com -Type A -DnsOnly | Out-Null
+1..6 | ForEach-Object {
+  (Get-Date).ToUniversalTime().ToString(&#39;HH:mm:ss&#39;)
+  Get-DnsClientCache -Entry docs.github.com |
+    Where-Object Type -eq 1 |
+    Select-Object Entry, TimeToLive, Data
+  Start-Sleep -Seconds 5
+}
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Microsoft — <a href="https://learn.microsoft.com/powershell/module/dnsclient/get-dnsclientcache"><code>Get-DnsClientCache</code></a></li>
+<li>Course — <a href="samples/os-cache-ttl-windows.txt">recorded countdown</a></li>
+</ul>
+<h3 id="macos-compare-the-two-recursive-answers">macOS: compare the two recursive answers</h3>
+<pre><code class="language-bash">name=&#39;depaul.edu&#39;
+dig &quot;@1.1.1.1&quot; &quot;$name&quot; A
+dig &quot;@8.8.8.8&quot; &quot;$name&quot; A
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Read SERVER, status, answer, and TTL. These replies come from the selected recursive resolvers, not your local cache.</p>
+</blockquote>
+<h3 id="run-it-compare-two-recursive-answers">Run it: compare two recursive answers</h3>
+<pre><code class="language-powershell">$name = &#39;depaul.edu&#39;
+Resolve-DnsName $name -Type A -Server 1.1.1.1 -DnsOnly
+Resolve-DnsName $name -Type A -Server 8.8.8.8 -DnsOnly
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Microsoft — <a href="https://learn.microsoft.com/powershell/module/dnsclient/resolve-dnsname"><code>Resolve-DnsName</code></a></li>
+<li>Course — <a href="samples/dig-split-answers.txt">resolver comparison</a></li>
+</ul>
+<h3 id="interpret-the-comparison-before-changing-anything">Interpret the comparison before changing anything</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Your observation</th><th>Plausible mechanism</th><th>What to conclude</th></tr></thead><tbody><tr><td>Different remaining TTLs</td><td>Caches filled or refreshed at different times</td><td>Compare cache age, not just the name</td></tr><tr><td>Different addresses</td><td>Cached older data or authoritative traffic steering</td><td>Compare time, resolver, and authority</td></tr><tr><td>Matching answers</td><td>These two queries agree right now</td><td>Other clients may still differ</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/dig-split-answers.txt">split answers and provenance</a></li>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc1034.html">RFC 1034, caching</a></li>
+</ul>
+<h3 id="maya-and-luis-can-both-be-reading-valid-cache-state">Maya and Luis can both be reading valid cache state</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Illustrative time</th><th>Maya&#39;s cache</th><th>Luis&#39;s cache</th></tr></thead><tbody><tr><td>09:00, before edit</td><td>Old address; 600 seconds remain</td><td>No entry</td></tr><tr><td>09:01, record changed</td><td>Still old; 540 seconds remain</td><td>Fetches new authoritative value</td></tr><tr><td>09:05, compare browsers</td><td>Still old; 300 seconds remain</td><td>New address</td></tr><tr><td>Maya&#39;s entry expires</td><td>Next lookup can fetch the new value</td><td>Independent timer continues</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc1034.html#section-4.3.4">RFC 1034 §4.3.4, caching</a></li>
+</ul>
+<h3 id="macos-read-the-same-offline-evidence">macOS: read the same offline evidence</h3>
+<pre><code class="language-bash">cat ./weeks/week02/samples/os-cache-ttl-windows.txt
+cat ./weeks/week02/samples/dig-split-answers.txt
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The first file is a Windows cache capture, not Mac output. Stop any dns-sd watch with Ctrl+C; no cache flush is needed.</p>
+</blockquote>
+<h3 id="same-caching-question-different-observations">Same caching question, different observations</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Probe</th><th>Observation</th><th>Important limit</th></tr></thead><tbody><tr><td>Windows cache command</td><td>A local cached record and remaining TTL</td><td>A snapshot, not a browser trace</td></tr><tr><td>Mac native lookup</td><td>An address and a reported TTL</td><td>The lookup may trigger fresh work</td></tr><tr><td>dig to a named server</td><td>That resolver&#39;s answer and TTL</td><td>Not a dump of the OS cache</td></tr></tbody></table></div>
+<h3 id="offline-comparison-and-a-clean-stopping-point">Offline comparison and a clean stopping point</h3>
+<pre><code class="language-powershell">Get-Content .\weeks\week02\samples\os-cache-ttl-windows.txt
+Get-Content .\weeks\week02\samples\dig-split-answers.txt
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Read the capture date. No records, servers, or cache settings were changed.</p>
+</blockquote>
+<h3 id="it-hasnt-propagated-yet-is-always-the-wrong-sentence">&quot;It hasn&#39;t propagated yet&quot; is always the wrong sentence</h3>
+<ul>
+<li>Nothing is pushed <strong>to any resolver</strong>. No recursive cache is notified</li>
+<li>The old value persists because a resolver already fetched it and is honoring <strong>your</strong> TTL</li>
+<li>The delay is not distance and not sync — it is a <strong>timer you chose</strong></li>
+<li>The fix is lowering the TTL <strong>before</strong> the change, not after</li>
+</ul>
+<blockquote>
+<p><strong>Caution</strong></p>
+<p>Lowering the TTL after the cutover does nothing for caches already holding the
+old record at the old TTL.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Julia Evans — <a href="https://jvns.ca/blog/2022/04/26/new-zine--how-dns-works-/">New Zine: How DNS Works!</a></li>
+</ul>
+<h3 id="failure-is-cached-too-and-the-ttl-comes-from-somewhere-surprising">Failure is cached too, and the TTL comes from somewhere surprising</h3>
+<pre><code class="language-console">$ dig @1.1.1.1 nonexistent-week2-demo.depaul.edu A
+
+;; -&gt;&gt;HEADER&lt;&lt;- opcode: QUERY, status: NXDOMAIN, id: 61390
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1
+
+;; AUTHORITY SECTION:
+depaul.edu.  900  IN  SOA  ns1.depaul.edu. networks.depaul.edu.
+                           3 14400 1800 1209600 900
+                                                 ^^^ minimum
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p>The <strong>last</strong> field of the SOA — here <code>900</code> — is the negative-cache TTL. The
+record&#39;s own TTL does not apply, because there is no record.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc2308.html">RFC 2308, Negative Caching of DNS Queries</a></li>
+</ul>
+<h3 id="nxdomain-and-nodata-are-not-the-same">NXDOMAIN and NODATA are not the same</h3>
+<h4 id="nodata--the-name-exists">NODATA — the name exists</h4>
+<pre><code class="language-console">$ dig @1.1.1.1 depaul.edu CAA
+;; status: NOERROR
+;; ANSWER: 0, AUTHORITY: 1
+;; AUTHORITY holds SOA
+</code></pre>
+<p>The name is real; this <em>type</em> is not. <strong>SOA</strong> in AUTHORITY is the tell.</p>
+<h4 id="a-referral-looks-identical">A referral looks identical</h4>
+<pre><code class="language-console">$ dig @a.root-servers.net ...
+;; status: NOERROR
+;; ANSWER: 0, AUTHORITY: 13
+;; AUTHORITY holds NS
+</code></pre>
+<p>Same status, same zero answers. <strong>NS</strong> in AUTHORITY means &quot;ask elsewhere.&quot;</p>
+<h3 id="same-name-same-second-three-different-answers">Same name, same second, three different answers</h3>
+<pre><code class="language-console">$ dig @1.1.1.1 www.microsoft.com A +noall +answer
+www.microsoft.com.  3584  IN  CNAME  ...edgekey.net.
+e13678.dscb.akamaiedge.net.  4  IN  A  23.0.194.92
+
+$ dig @8.8.8.8 www.microsoft.com A +noall +answer
+www.microsoft.com.  1494  IN  CNAME  ...edgekey.net.
+e13678.dscb.akamaiedge.net.  20  IN  A  23.0.194.92
+
+$ dig @9.9.9.9 www.microsoft.com A +noall +answer
+www.microsoft.com.  2061  IN  CNAME  ...edgekey.net.
+e13678.dscb.akamaiedge.net.  17  IN  A  184.28.10.89
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Different addresses <strong>and</strong> different TTL remainders. Neither is wrong. There is
+no single correct answer to &quot;what does this name resolve to.&quot;</p>
+</blockquote>
+<h3 id="even-one-resolver-ip-is-many-caches">Even one resolver IP is many caches</h3>
+<pre><code class="language-console">$ for i in 1 2 3 4 5 6; do dig @1.1.1.1 depaul.edu A +noall +answer; done
+
+depaul.edu.  86400  IN  A  64.239.109.1
+depaul.edu.  86400  IN  A  64.239.109.1
+depaul.edu.  86290  IN  A  64.239.109.1     &lt;- 110 s older
+depaul.edu.  86400  IN  A  64.239.109.1
+depaul.edu.  86290  IN  A  64.239.109.1     &lt;- same older node
+depaul.edu.  86400  IN  A  64.239.109.1
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p><code>1.1.1.1</code> is an <strong>anycast</strong> address announced from hundreds of sites, each with
+its own cache — and each site load-balances across several machines.</p>
+</blockquote>
+<h3 id="doh-and-dot-move-the-conversation-not-the-answer">DoH and DoT move the conversation, not the answer</h3>
+<ul>
+<li><strong>DoT</strong> — DNS over TLS, port <strong>853</strong>. Encrypted, but on a port that is obviously DNS</li>
+<li><strong>DoH</strong> — DNS over HTTPS, port <strong>443</strong>. Encrypted, and hard to distinguish from web traffic</li>
+<li>The resolution logic is unchanged — same recursion, same caches, same TTLs</li>
+<li>What changes is <strong>who can see and who can intercept</strong> — and <em>which resolver you ask</em></li>
+</ul>
+<blockquote>
+<p><strong>What actually breaks</strong></p>
+<p>Split-horizon DNS. A browser using DoH to a public resolver bypasses the
+corporate or campus resolver that serves internal-only names — so <code>intranet. depaul.edu</code> stops resolving on a machine that is physically on the network.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc8484.html">RFC 8484, DNS Queries over HTTPS</a> · <a href="https://www.rfc-editor.org/rfc/rfc7858.html">RFC 7858, DNS over TLS</a></li>
+</ul>
+<h3 id="doh-really-is-just-an-https-request">DoH really is just an HTTPS request</h3>
+<pre><code class="language-console">$ curl -s -H &quot;accept: application/dns-json&quot; \
+    &quot;https://cloudflare-dns.com/dns-query?name=depaul.edu&amp;type=A&quot;
+{&quot;Status&quot;:0,&quot;TC&quot;:false,&quot;RD&quot;:true,&quot;RA&quot;:true,&quot;AD&quot;:false,&quot;CD&quot;:false,
+ &quot;Question&quot;:[{&quot;name&quot;:&quot;depaul.edu&quot;,&quot;type&quot;:1}],
+ &quot;Answer&quot;:[{&quot;name&quot;:&quot;depaul.edu&quot;,&quot;type&quot;:1,&quot;TTL&quot;:86400,
+            &quot;data&quot;:&quot;64.239.109.1&quot;}]}
+
+# and on the wire:
+* Connected to cloudflare-dns.com (104.16.249.249) port 443
+* ALPN: server accepted h2
+&gt; GET /dns-query?name=depaul.edu&amp;type=A HTTP/2
+&lt; HTTP/2 200
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p>This JSON API is a <strong>vendor convenience</strong>. Standard DoH (RFC 8484) carries the
+binary wire format as <code>application/dns-message</code>.</p>
+</blockquote>
+<h3 id="you-changed-an-a-record-20-minutes-ago-three-people-see-three-different-things">You changed an A record 20 minutes ago. Three people see three different things.</h3>
+<ol>
+<li><strong>You</strong> see the new address immediately from your laptop</li>
+<li><strong>A second device you own</strong>, same wifi, still shows the old address</li>
+<li><strong>The grader</strong> gets <code>NXDOMAIN</code> for the <code>status.</code> hostname you created 5 minutes ago</li>
+</ol>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc2308.html">RFC 2308, Negative Caching of DNS Queries</a></li>
+</ul>
+<h2 id="block-b--owning-a-zone">Block B — Owning a zone</h2>
+<h3 id="owning-a-zone">Owning a zone</h3>
+<p>Registrar, registry, DNS host — and the records you will actually configure tonight</p>
+<p>You bought a domain last week. Tonight you make it point at something.</p>
+<h3 id="fictional-campuspulse-case-priya-edited-a-zone-nobody-queries">Fictional CampusPulse case: Priya edited a zone nobody queries</h3>
+<h4 id="the-change">The change</h4>
+<ul>
+<li>The registrar account shows an editable DNS zone</li>
+<li>Priya changes <code>status</code> from <code>203.0.113.10</code> to <code>.44</code></li>
+<li>The UI says <strong>Saved</strong>, but public answers never move</li>
+</ul>
+<h4 id="the-ownership-check">The ownership check</h4>
+<ul>
+<li><code>dig NS</code> names a different host for <strong>campuspulse.example</strong></li>
+<li>That host owns the authoritative copy of the <code>A</code> record</li>
+<li>Priya moves the change, lowers TTL first, and writes a rollback time</li>
+</ul>
+<h3 id="the-one-question-that-ends-most-dns-support-tickets">The one question that ends most DNS support tickets</h3>
+<ul>
+<li>&quot;My domain is broken&quot; is never a single system&#39;s fault, because a domain is <strong>three</strong> systems</li>
+<li>The <strong>registry</strong> runs the TLD. The <strong>registrar</strong> sells you the name. The <strong>DNS host</strong> answers queries</li>
+<li>They can be three different companies, and usually are</li>
+<li>Almost every DNS ticket is really &quot;I edited the wrong one of these three&quot;</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Ask first: <em>is this a delegation problem or a record problem?</em> Delegation lives
+at the registrar. Records live at the DNS host. Different company, different
+console, different blast radius.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>ICANN — <a href="https://www.icann.org/en/icann-acronyms-and-terms/registrar-en">Registrar (official definition)</a></li>
+<li>Julia Evans — <a href="https://jvns.ca/blog/2022/04/26/new-zine--how-dns-works-/">New Zine: How DNS Works!</a></li>
+</ul>
+<h3 id="who-holds-what">Who holds what</h3>
+<p><img src="../../assets/class-notes/week02-session-s39-1.svg" alt="Diagram of three organisations: the registry operates the top level domain and holds the delegation NS records; the registrar sells the domain and is the only party that can change the delegation; the DNS host runs the authoritative nameservers and holds the zone records such as A, MX and TXT"></p>
+<p><em>Three organisations. Only one of them answers queries; only one of them can change who does.</em></p>
+<h3 id="delegation-is-two-copies-of-the-same-fact-held-by-two-parties">Delegation is two copies of the same fact, held by two parties</h3>
+<pre><code class="language-console">$ dig @a.edu-servers.net depaul.edu NS +norecurse   # parent: edu.
+;; flags: qr;  ANSWER: 0, AUTHORITY: 4              # a referral
+depaul.edu.  172800  IN  NS  ns1.depaul.edu.        # TTL set by the registry
+
+$ dig @ns1.depaul.edu depaul.edu NS +norecurse      # child: your zone
+;; flags: qr aa;  ANSWER: 4                         # authoritative
+depaul.edu.   14400  IN  NS  ns1.depaul.edu.        # TTL set by you
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The parent&#39;s copy is what the world follows. You cannot edit it from your DNS
+host — you edit it at your <strong>registrar</strong>, and the registry publishes it.</p>
+</blockquote>
+<h3 id="the-soa-is-the-zones-identity-card">The SOA is the zone&#39;s identity card</h3>
+<pre><code class="language-console">$ dig @1.1.1.1 depaul.edu SOA +noall +answer
+
+depaul.edu. 1800 IN SOA ns1.depaul.edu. networks.depaul.edu. (
+                        3          ; serial   bump on every change
+                        14400      ; refresh  secondary polls primary
+                        1800       ; retry    after a failed poll
+                        1209600    ; expire   secondary stops answering
+                        900 )      ; minimum  NEGATIVE-cache TTL
+</code></pre>
+<blockquote>
+<p><strong>Caution</strong></p>
+<p><code>networks.depaul.edu.</code> is an <strong>email address</strong> with the first dot standing in for
+the <code>@</code>. It is <code>networks@depaul.edu</code>. This trips up everyone exactly once.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc1035.html">RFC 1035 §3.3.13, SOA RDATA format</a></li>
+</ul>
+<h3 id="seven-record-types-you-will-actually-configure">Seven record types you will actually configure</h3>
+<h3 id="the-record-types-you-will-actually-use">The record types you will actually use</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Type</th><th>Answers</th><th>The trap</th></tr></thead><tbody><tr><td><code>A</code></td><td>name → IPv4</td><td>Hard-codes an address you may not own</td></tr><tr><td><code>AAAA</code></td><td>name → IPv6</td><td>Missing it fails IPv6 clients silently</td></tr><tr><td><code>CNAME</code></td><td>name → a name</td><td><strong>Illegal at the apex</strong> — next slide</td></tr><tr><td><code>TXT</code></td><td>strings</td><td>255-char chunking</td></tr><tr><td><code>CAA</code></td><td>who may issue certs</td><td>Absent = <strong>any CA may issue</strong></td></tr><tr><td><code>MX</code></td><td>where mail goes</td><td>A <em>name</em>, never an address</td></tr></tbody></table></div>
+<h3 id="the-apex-cname-problem">The apex CNAME problem</h3>
+<ul>
+<li>A <code>CNAME</code> means &quot;this name <strong>is</strong> another name.&quot;</li>
+<li>The apex must hold <code>SOA</code> and <code>NS</code>, and usually <code>MX</code>, <code>TXT</code>, and <code>CAA</code>.</li>
+<li>A <code>CNAME</code> cannot coexist with those records.</li>
+<li><code>www</code> is a subdomain, so a CNAME is legal there.</li>
+<li>The apex needs <code>ALIAS</code> or flattening — useful, but not in any RFC.</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Do not put a CNAME at the zone apex.</p>
+</blockquote>
+<h3 id="caa-the-record-that-says-who-is-allowed-to-issue-for-you">CAA: the record that says who is allowed to issue for you</h3>
+<pre><code class="language-console">$ dig @1.1.1.1 github.com CAA +noall +answer
+github.com. 3600 IN CAA 0 issue     &quot;letsencrypt.org&quot;
+github.com. 3600 IN CAA 0 issuewild &quot;letsencrypt.org&quot;
+             ... 5 more: digicert, sectigo, globalsign, 2 issuewild
+
+$ dig @1.1.1.1 depaul.edu CAA
+;; status: NOERROR
+;; ANSWER: 0             &lt;- NODATA, and edu. has none either
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p><code>issue</code> authorizes issuance; <code>issuewild</code> <strong>overrides it for wildcards</strong> when
+present. A CA must check this record — climbing to the parent if there is none.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc8659.html">RFC 8659, DNS Certification Authority Authorization</a></li>
+</ul>
+<h3 id="txt-records-carry-other-systems-truth-not-yours">TXT records carry other systems&#39; truth, not yours</h3>
+<pre><code class="language-console">$ dig @1.1.1.1 depaul.edu TXT +noall +answer
+
+depaul.edu. 86400 IN TXT &quot;v=spf1 include:spf.protection.outlook.com&quot;
+                         &quot; include:_spf.google.com ... ~all&quot;
+depaul.edu. 86400 IN TXT &quot;google-site-verification=GgecFA3L0pqdJ...&quot;
+depaul.edu. 86400 IN TXT &quot;apple-domain-verification=fJm7Ug5BsVd0I7Fi&quot;
+depaul.edu. 86400 IN TXT &quot;atlassian-domain-verification=tl5FjTuHJ...&quot;
+depaul.edu. 86400 IN TXT &quot;ZOOM_verify_e622Dwe-Qi-ZMEJfMH3t1w&quot;
+                                        ... 16 more verification strings
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p>Every one of these is a third party asking &quot;prove you control this domain.&quot;
+Control of DNS <strong>is</strong> the proof of ownership on the modern web.</p>
+</blockquote>
+<h3 id="ttl-is-a-decision-not-a-default">TTL is a decision, not a default</h3>
+<h3 id="what-a-ttl-actually-buys-and-costs">What a TTL actually buys and costs</h3>
+<h4 id="long-ttl--86400">Long TTL — 86400</h4>
+<ul>
+<li>Fewer queries, cheaper, faster</li>
+<li>Survives an authoritative outage</li>
+<li><strong>A mistake is live for a day</strong></li>
+</ul>
+<h4 id="short-ttl--60">Short TTL — 60</h4>
+<ul>
+<li>Change takes effect in a minute</li>
+<li>Rollback is genuinely fast</li>
+<li>More query load</li>
+<li><strong>An outage hits users in 60 s</strong></li>
+</ul>
+<h3 id="the-cutover-timeline">The cutover timeline</h3>
+<p><img src="../../assets/class-notes/week02-session-s49-1.svg" alt="A five stage cutover timeline: T minus 48 hours lower the TTL from 86400 to 60, wait at least the old TTL of 24 hours so every cache refreshes, T zero change the record, T plus 5 minutes verify from at least two independent resolvers, T plus 24 hours raise the TTL back to 3600. A rollback arrow spans from the change point back to a one minute recovery window."></p>
+<p><em>The TTL drop must precede the change by at least the OLD TTL. That is the whole technique.</em></p>
+<h3 id="a-zone-with-reasons-every-ttl-is-a-decision">A zone with reasons: every TTL is a decision</h3>
+<pre><code class="language-dns">$ORIGIN campuspulse.example.
+@       3600  IN  NS    ns1.vendor.net.
+@       3600  IN  A     203.0.113.20
+@         60  IN  A     198.51.100.7    ; low: cutover window open
+@       3600  IN  AAAA  2001:db8::20
+www     3600  IN  CNAME campuspulse.example.
+status    60  IN  CNAME edge.vendor.net. ; low: may repoint
+@       3600  IN  MX    10 mail.vendor.net.
+@       3600  IN  CAA   0 issue &quot;letsencrypt.org&quot;
+@       3600  IN  TXT   &quot;v=spf1 include:_spf.vendor.net -all&quot;
+</code></pre>
+<h3 id="failover-and-geo-routing-in-one-slide">Failover and geo-routing, in one slide</h3>
+<ul>
+<li>Your authoritative server can answer <strong>differently per query</strong> — that is all these features are</li>
+<li><strong>Failover:</strong> health-check the target, stop returning the address that fails</li>
+<li><strong>Weighted:</strong> return address A 90% of the time, B 10% — a canary</li>
+<li><strong>Latency / geo:</strong> answer based on where the query appeared to come from</li>
+<li>Recovery is bounded by <strong>health-detection time + the remaining TTL</strong> on every cached answer</li>
+</ul>
+<blockquote>
+<p><strong>Recognition level only</strong></p>
+<p>This is a concept tour, not a build. You are not implementing traffic management
+this quarter. You <strong>are</strong> expected to recognise it in someone else&#39;s zone.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>AWS — <a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html">Route 53 routing policies</a></li>
+</ul>
+<h3 id="dnssec-read-it-at-recognition-level-and-know-why">DNSSEC: read it at recognition level, and know why</h3>
+<ul>
+<li><strong>DNSSEC</strong> — cryptographic signatures over DNS answers; <code>RRSIG</code>, <code>DS</code>, <code>NSEC3</code></li>
+<li>You already saw <code>RRSIG</code> and <code>DS</code> records in the Block A <code>+trace</code> output</li>
+<li>Slack&#39;s 2021 outage was a <strong>DNSSEC rollout</strong> that broke resolution for hours</li>
+<li>Recognition level: know what a <code>DS</code> record is for and that a broken chain is a hard failure</li>
+</ul>
+<blockquote>
+<p><strong>Note</strong></p>
+<p>Tested at recognition level only, per the course outline&#39;s depth note. The
+reading is in this week&#39;s prep and it is worth doing before Week 4&#39;s certificate
+work.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Slack Engineering — <a href="https://slack.engineering/what-happened-during-slacks-dnssec-rollout/">What happened during Slack&#39;s DNSSEC rollout</a></li>
+<li>Cloudflare — <a href="https://www.cloudflare.com/learning/dns/dnssec/how-dnssec-works/">How DNSSEC works</a></li>
+</ul>
+<h3 id="live-create-a-record-watch-it-become-real">Live: create a record, watch it become real</h3>
+<h4 id="steps">Steps</h4>
+<ol>
+<li>Use an already delegated zone you own; open its DNS host console</li>
+<li>Follow your OS preparation; create only its new demo label</li>
+<li>Compare an authoritative answer with two recursive answers</li>
+</ol>
+<h4 id="expected-observations">Expected observations</h4>
+<ul>
+<li>Authoritative and cached state may differ briefly</li>
+<li><code>NXDOMAIN</code> needs diagnosis, not an arbitrary wait</li>
+</ul>
+<h4 id="fallback">Fallback</h4>
+<p>No owned zone or <code>dig</code>? Use the exact saved-evidence commands below.</p>
+<h3 id="macos-prepare-an-isolated-demo-name">macOS: prepare an isolated demo name</h3>
+<pre><code class="language-bash">command -v dig
+printf &#39;Delegated zone you own: &#39;; read -r zone
+label=&quot;csc436-$(uuidgen | tr &#39;A-F&#39; &#39;a-f&#39; | cut -c1-8)&quot;
+name=&quot;$label.$zone&quot;
+ns=$(dig +short NS &quot;$zone&quot; | head -n 1)
+[ -n &quot;$ns&quot; ] || printf &#39;STOP: no nameserver; use offline evidence.\n&#39;
+printf &#39;label=%s\nname=%s\nserver=%s\n&#39; &quot;$label&quot; &quot;$name&quot; &quot;$ns&quot;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>If the zone or server is blank, stop and use the fallback. A nameserver answer is not proof of ownership.</p>
+</blockquote>
+<h3 id="prepare-an-isolated-demo-name">Prepare an isolated demo name</h3>
+<pre><code class="language-powershell">Get-Command dig
+$zone = Read-Host &#39;Already delegated DNS zone you own&#39;
+$label = &#39;csc436-&#39; + [guid]::NewGuid().ToString(&#39;N&#39;).Substring(0,8)
+$name = &quot;$label.$zone&quot;
+$ns = dig +short NS $zone | Select-Object -First 1
+if (-not $ns) { throw &#39;No NS answer; use the offline fallback.&#39; }
+$label
+$name
+$ns
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="lab.html">owned-domain lab</a></li>
+<li>ISC — <a href="https://bind9.readthedocs.io/en/latest/manpages.html#dig-dns-lookup-utility"><code>dig</code></a></li>
+</ul>
+<h3 id="in-the-dns-host-console-save-exactly-one-record">In the DNS host console, save exactly one record</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Field</th><th>Enter</th><th>Why</th></tr></thead><tbody><tr><td>Type</td><td><code>A</code></td><td>Map the test label to IPv4</td></tr><tr><td>Name</td><td>The printed <code>$label</code></td><td>Do not edit apex, mail, or <code>www</code></td></tr><tr><td>Value</td><td><code>203.0.113.10</code></td><td>Documentation address; no real service</td></tr><tr><td>TTL</td><td><code>60</code>, or the allowed minimum</td><td>Record the value actually accepted</td></tr><tr><td>Proxy mode, if offered</td><td>DNS only</td><td>Keep the experiment about DNS</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc5737.html">RFC 5737, documentation addresses</a></li>
+<li>Course — <a href="lab.html">zone-change lab</a></li>
+</ul>
+<h3 id="macos-query-authority-then-the-caches">macOS: query authority, then the caches</h3>
+<pre><code class="language-bash">date -u &#39;+%Y-%m-%dT%H:%M:%SZ&#39;
+dig &quot;@$ns&quot; &quot;$name&quot; A +norecurse
+dig &quot;@1.1.1.1&quot; &quot;$name&quot; A
+dig &quot;@8.8.8.8&quot; &quot;$name&quot; A
+sleep 30
+dig &quot;@1.1.1.1&quot; &quot;$name&quot; A
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>After the console edit, compare the authoritative answer with each cached answer and its remaining TTL.</p>
+</blockquote>
+<h3 id="query-the-source-then-two-caches">Query the source, then two caches</h3>
+<pre><code class="language-powershell">(Get-Date).ToUniversalTime().ToString(&#39;o&#39;)
+dig &quot;@$ns&quot; $name A +norecurse
+dig &quot;@1.1.1.1&quot; $name A
+dig &quot;@8.8.8.8&quot; $name A
+Start-Sleep -Seconds 30
+dig &quot;@1.1.1.1&quot; $name A
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/dig-recursive-vs-authoritative.txt">recursive versus authoritative evidence</a></li>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc2308.html">RFC 2308, negative caching</a></li>
+</ul>
+<h3 id="which-dns-fields-carry-the-conclusion">Which DNS fields carry the conclusion?</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Read this field</th><th>Expected after publication</th><th>Interpretation</th></tr></thead><tbody><tr><td>Authoritative flags include <code>aa</code></td><td>A record for <code>203.0.113.10</code></td><td>This authority serves the saved value</td></tr><tr><td>Recursive ANSWER address and TTL</td><td>Same address; its own remaining TTL</td><td>A cache answers on its own clock</td></tr><tr><td><code>NXDOMAIN</code> with an SOA</td><td>Authority and resolver may disagree</td><td>Inspect negative-cache lifetime</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc2308.html#section-5">RFC 2308 §5, caching negative answers</a></li>
+<li>Course — <a href="samples/dig-nxdomain.txt">negative-cache evidence</a></li>
+</ul>
+<h3 id="what-this-changes-about-the-campuspulse-cutover">What this changes about the CampusPulse cutover</h3>
+<h4 id="the-false-reassurance">The false reassurance</h4>
+<p>&quot;The console saved it.&quot;</p>
+<p>That only describes a control-plane action, not every resolver&#39;s answer.</p>
+<h4 id="the-operational-decision">The operational decision</h4>
+<p>Compare authority and caches.</p>
+<p>Lower TTL before a real cutover; retain the old service during cache expiry.</p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="lab.html">cutover and rollback exercise</a></li>
+</ul>
+<h3 id="macos-check-the-record-after-deletion">macOS: check the record after deletion</h3>
+<pre><code class="language-bash">dig &quot;@$ns&quot; &quot;$name&quot; A +norecurse
+dig &quot;@1.1.1.1&quot; &quot;$name&quot; A
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Delete only the generated demo record in the provider console. A recursive server can still return its cached answer.</p>
+</blockquote>
+<h3 id="delete-only-the-demo-record-verify-the-aftermath">Delete only the demo record; verify the aftermath</h3>
+<pre><code class="language-powershell">dig &quot;@$ns&quot; $name A +norecurse
+dig &quot;@1.1.1.1&quot; $name A
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Delete the record whose name matches <code>$label</code>, not the zone or its nameservers.</p>
+</blockquote>
+<h3 id="macos-the-offline-authoritycache-comparison">macOS: the offline authority/cache comparison</h3>
+<pre><code class="language-bash">samples=&#39;./weeks/week02/samples&#39;
+cat &quot;$samples/dig-recursive-vs-authoritative.txt&quot;
+cat &quot;$samples/dig-nxdomain.txt&quot;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>These are the same archived examples used on Windows. Reading them creates no record, process, or cleanup task.</p>
+</blockquote>
+<h3 id="offline-fallback-authority-cache-and-negative-cache">Offline fallback: authority, cache, and negative cache</h3>
+<pre><code class="language-powershell">$samples = &#39;.\weeks\week02\samples&#39;
+Get-Content &quot;$samples\dig-recursive-vs-authoritative.txt&quot;
+Get-Content &quot;$samples\dig-nxdomain.txt&quot;
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p>These are 2026-08-15 captures of other names, not a recording of your demo label.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/index.html">capture provenance</a></li>
+</ul>
+<h3 id="four-zone-changes-which-console-and-what-is-the-blast-radius">Four zone changes. Which console, and what is the blast radius?</h3>
+<ol>
+<li>Point <code>www</code> at a new hosting provider</li>
+<li>Move DNS from your registrar&#39;s free service to Cloudflare</li>
+<li>Add a <code>CAA</code> record naming Let&#39;s Encrypt</li>
+<li>Change the apex from <code>203.0.113.20</code> to <code>198.51.100.7</code> at 09:00 tomorrow</li>
+</ol>
+<p><strong>Sources</strong></p>
+<ul>
+<li>ICANN — <a href="https://www.icann.org/en/icann-acronyms-and-terms/registrar-en">Registrar (official definition)</a></li>
+</ul>
+<h2 id="block-c--http-as-a-contract">Block C — HTTP as a contract</h2>
+<h3 id="http-as-a-contract">HTTP as a contract</h3>
+<p>Methods, status codes, and the handful of headers that decide whether your request means anything</p>
+<p>The name resolved. Now something has to answer — and answering is a contract.</p>
+<h3 id="fictional-campuspulse-case-a-redirect-quietly-drops-the-report">Fictional CampusPulse case: a redirect quietly drops the report</h3>
+<h4 id="the-request">The request</h4>
+<ul>
+<li>The mobile client sends a report with <code>POST</code> over HTTP</li>
+<li>The edge answers <code>302</code> and points to the HTTPS URL</li>
+<li>The client follows the redirect as <code>GET</code>; the JSON body is gone</li>
+</ul>
+<h4 id="the-contract-repair">The contract repair</h4>
+<ul>
+<li><code>307</code> preserves the method and body for a temporary redirect</li>
+<li><code>308</code> preserves them for a permanent redirect</li>
+<li>Evidence is the followed request line, not the first response alone</li>
+</ul>
+<h3 id="an-http-request-is-text-you-could-have-typed">An HTTP request is text you could have typed</h3>
+<pre><code class="language-console">$ printf &#39;GET /healthz HTTP/1.1\r\nHost: status.campuspulse.example\r\n\
+Connection: close\r\n\r\n&#39; | nc 127.0.0.1 8081
+
+HTTP/1.1 200 OK
+Server: campuspulse-fault-lab/1.0
+Content-Type: application/json
+Content-Length: 39
+Vary: Accept-Encoding
+                                    ... Date and Connection also returned
+{&quot;status&quot;:&quot;ok&quot;,&quot;service&quot;:&quot;campuspulse&quot;}
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Request line, headers, blank line, body. Response line, headers, blank line,
+body. The blank line is not decoration — it is the delimiter.</p>
+</blockquote>
+<h3 id="host-is-how-one-ip-serves-many-sites"><code>Host</code> is how one IP serves many sites</h3>
+<h4 id="what-it-does">What it does</h4>
+<p>A TCP connection carries no name — only an address and a port.</p>
+<p><code>Host</code> is how the server learns which of the 500 sites on that address you
+wanted. Required in HTTP/1.1.</p>
+<h4 id="why-you-will-care">Why you will care</h4>
+<pre><code class="language-console">$ curl -sI 127.0.0.1:8081/ \
+    -H &quot;Host: status.cp&quot;
+HTTP/1.1 200 OK
+
+$ curl -sI 127.0.0.1:8081/ \
+    -H &quot;Host: www.cp&quot;
+HTTP/1.1 404 Not Found
+</code></pre>
+<h3 id="safe-and-idempotent-are-different">Safe and idempotent are different</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Method</th><th style="text-align:center">Safe</th><th style="text-align:center">Idem.</th><th>What that permits</th></tr></thead><tbody><tr><td><code>GET</code></td><td style="text-align:center">yes</td><td style="text-align:center">yes</td><td>Cache it, prefetch it, retry it</td></tr><tr><td><code>HEAD</code></td><td style="text-align:center">yes</td><td style="text-align:center">yes</td><td>Same as GET, headers only</td></tr><tr><td><code>PUT</code></td><td style="text-align:center">no</td><td style="text-align:center">yes</td><td>Retry a timeout, no duplicate</td></tr><tr><td><code>DELETE</code></td><td style="text-align:center">no</td><td style="text-align:center">yes</td><td>Retry; code may become <code>404</code></td></tr><tr><td><code>POST</code></td><td style="text-align:center">no</td><td style="text-align:center"><strong>no</strong></td><td><strong>Never blind-retry.</strong> May charge twice</td></tr><tr><td><code>PATCH</code></td><td style="text-align:center">no</td><td style="text-align:center"><strong>no</strong></td><td>Depends on your patch semantics</td></tr></tbody></table></div>
+<h3 id="status-families-read-operationally">Status families, read operationally</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Family</th><th>Says</th><th>What you actually do</th></tr></thead><tbody><tr><td><code>2xx</code></td><td>It worked</td><td>Check the body — <code>200</code> can wrap an error</td></tr><tr><td><code>3xx</code></td><td>Look elsewhere</td><td>Count hops; did the method survive?</td></tr><tr><td><code>4xx</code></td><td><strong>You</strong> are wrong</td><td>Fix it — but <code>408</code>/<code>425</code>/<code>429</code> say <em>retry</em></td></tr><tr><td><code>5xx</code></td><td><strong>I</strong> am wrong</td><td>Retry with backoff — not <code>POST</code>, not <code>501</code></td></tr></tbody></table></div>
+<h3 id="the-four-redirects">The four redirects</h3>
+<h4 id="the-old-pair">The old pair</h4>
+<p><code>301 Moved Permanently</code>
+<code>302 Found</code></p>
+<p>Clients are <strong>permitted</strong> to rewrite a <code>POST</code> to <code>GET</code>. In practice they always
+do — the body is dropped.</p>
+<h4 id="the-pair-that-fixed-it">The pair that fixed it</h4>
+<p><code>307 Temporary Redirect</code>
+<code>308 Permanent Redirect</code></p>
+<p>Method and body <strong>must</strong> be preserved. Redirecting anything but a page view? Use
+these.</p>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc9110.html">RFC 9110 §15.4, Redirection 3xx</a></li>
+</ul>
+<h3 id="a-post-that-quietly-became-a-get">A <code>POST</code> that quietly became a <code>GET</code></h3>
+<pre><code class="language-console">$ curl -sv -L -d &#39;{&quot;service&quot;:&quot;library-wifi&quot;,&quot;state&quot;:&quot;degraded&quot;}&#39; \
+    -H &#39;Content-Type: application/json&#39; \
+    http://campuspulse.example:8082/legacy/incidents
+
+&gt; POST /legacy/incidents HTTP/1.1       &lt;- the request you wrote
+&lt; HTTP/1.1 302 Found
+&lt; Location: http://campuspulse.example:8082/api/incidents
+* Switch from POST to GET               &lt;- curl obeying the spec
+&gt; GET /api/incidents HTTP/1.1           &lt;- the request that arrived
+&lt; HTTP/1.1 405 Method Not Allowed
+&lt; Allow: POST
+{&quot;error&quot;:&quot;method_not_allowed&quot;,&quot;expected&quot;:&quot;POST&quot;}
+</code></pre>
+<blockquote>
+<p><strong>Failure to avoid</strong></p>
+<p>The <code>405</code> is the lucky outcome. If <code>GET /api/incidents</code> had returned a <code>200</code> list
+of incidents, the client would have reported success and created nothing.</p>
+</blockquote>
+<h3 id="your-tool-will-lie-to-you-if-you-let-it">Your tool will lie to you if you let it</h3>
+<pre><code class="language-console">$ curl -sv -L -X POST -d &#39;{...}&#39; \
+    http://campuspulse.example:8082/legacy/incidents
+
+&lt; HTTP/1.1 302 Found
+* Switch from POST to GET                &lt;- curl says it switched
+&gt; POST /api/incidents HTTP/1.1           &lt;- but -X forced POST anyway
+&lt; HTTP/1.1 201 Created
+{&quot;created&quot;:true}
+</code></pre>
+<blockquote>
+<p><strong>Caution</strong></p>
+<p><code>-X POST</code> overrides curl&#39;s method handling on redirects. The transcript now shows
+success — and no longer reproduces the bug your users are reporting.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>curl — <a href="https://curl.se/docs/manpage.html">manual page, <code>--request</code></a></li>
+</ul>
+<h3 id="the-headers-that-carry-meaning">The headers that carry meaning</h3>
+<h4 id="on-the-request">On the request</h4>
+<ul>
+<li><code>Host</code> — which site</li>
+<li><code>Accept</code> — what I can parse</li>
+<li><code>Content-Type</code> — what I send</li>
+<li><code>Authorization</code> — who I am</li>
+<li><code>Cookie</code> — state the server gave me</li>
+</ul>
+<h4 id="on-the-response">On the response</h4>
+<ul>
+<li><code>Set-Cookie</code> — state to hold</li>
+<li><code>Location</code> — where to go next</li>
+<li><code>Cache-Control</code> — how long it is good</li>
+<li><code>Vary</code> — what the cache key depends on</li>
+<li><code>Allow</code> — which methods this URL takes</li>
+</ul>
+<h3 id="real-headers-from-a-real-response">Real headers, from a real response</h3>
+<pre><code class="language-console">$ curl -sSI -H &quot;Accept-Encoding: gzip&quot; https://jvns.ca/
+
+HTTP/2 200
+cache-control: public,max-age=0,must-revalidate
+cache-status: &quot;Netlify Edge&quot;; fwd=miss; fwd-status=200; stored
+content-encoding: gzip
+content-type: text/html; charset=UTF-8
+vary: Accept-Encoding
+strict-transport-security: max-age=31536000
+etag: &quot;6008c0f02c21b4ab160180f6d8a36d15-ssl-df&quot;
+server: Netlify
+</code></pre>
+<blockquote>
+<p><strong>Note</strong></p>
+<p><code>vary: Accept-Encoding</code> plus <code>content-encoding: gzip</code> is the correct pair. The
+edge is storing the compressed and uncompressed copies under different keys.</p>
+</blockquote>
+<h3 id="x-forwarded--is-a-claim-not-a-fact"><code>X-Forwarded-*</code> is a claim, not a fact</h3>
+<ul>
+<li>A TLS-terminating proxy ends the client&#39;s connection and opens a <strong>new</strong> one to your app</li>
+<li>Your app sees the <em>proxy&#39;s</em> address and protocol — true about the proxy, wrong about the client</li>
+<li>So the proxy <em>asserts</em> the client&#39;s details: <code>X-Forwarded-For</code>, <code>X-Forwarded-Proto</code>, <code>X-Forwarded-Host</code></li>
+<li><strong>Anyone can send these headers.</strong> They are trustworthy only from a proxy you control</li>
+</ul>
+<blockquote>
+<p><strong>Failure to avoid</strong></p>
+<p>An app that trusts <code>X-Forwarded-For</code> from any source can be given any client IP
+by any client — defeating rate limits, IP allowlists, and audit logs.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>MDN — <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/X-Forwarded-Proto">X-Forwarded-Proto</a></li>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc7239.html">RFC 7239, Forwarded HTTP Extension</a></li>
+</ul>
+<h3 id="one-letter-group-wrong-and-it-redirects-forever">One letter-group wrong, and it redirects forever</h3>
+<pre><code class="language-console">$ curl -sSIL --max-redirs 4 \
+    --resolve status.campuspulse.example:8084:127.0.0.1 \
+    http://status.campuspulse.example:8084/healthz
+
+HTTP/1.1 301 Moved Permanently
+x-app-saw-xfp: (absent)
+x-app-saw-forwarded-headers: x-forwarded-protocol, x-forwarded-for,
+                             x-forwarded-host
+location: http://status.campuspulse.example:8084/healthz
+x-proxy: campuspulse-lb/1.0 (terminates TLS)
+                                      ... four identical hops elided
+curl: (47) Maximum (4) redirects followed
+
+$ curl -sI -H &quot;X-Forwarded-Proto: https&quot; http://127.0.0.1:8083/healthz
+HTTP/1.1 200 OK              &lt;- the app is fine. the header was wrong.
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The app reads the Proto header; the proxy sends the differently named Protocol header.</p>
+</blockquote>
+<h3 id="live-speak-http-with-your-hands">Live: speak HTTP with your hands</h3>
+<h4 id="steps-1">Steps</h4>
+<ol>
+<li>Start the local fixture using your OS&#39;s A command</li>
+<li>Use your OS&#39;s raw-request step in B; keep the destination fixed</li>
+<li>Change only <code>Host</code>: <code>status</code> succeeds; <code>www</code> fails</li>
+</ol>
+<h4 id="expected-observations-1">Expected observations</h4>
+<ul>
+<li>One <code>Host</code> value returns <code>200</code>; the other returns <code>404</code></li>
+</ul>
+<h4 id="fallback-1">Fallback</h4>
+<p>The last command slide opens all three real fault transcripts.</p>
+<h3 id="macos-a-start-the-same-local-faults">macOS A: start the same local faults</h3>
+<pre><code class="language-bash"># Default ports are 8081-8084.
+# Busy? Add --port 9100; use 9100-9103 in ALL later requests.
+node ./weeks/week02/samples/http-faults/fault-server.mjs
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Expect the four loopback listeners. Keep A running; if changing the base port, update every request URL too.</p>
+</blockquote>
+<h3 id="terminal-a-start-all-three-local-faults">Terminal A: start all three local faults</h3>
+<pre><code class="language-powershell"># Expected on loopback: 8081 Host, 8082 redirect, 8083 app, 8084 proxy.
+# Busy ports? Add --port 9100; use ports 9100-9103 in later commands.
+node .\weeks\week02\samples\http-faults\fault-server.mjs
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/http-faults/fault-server.mjs">HTTP fault server</a></li>
+</ul>
+<h3 id="macos-b-write-the-http-bytes">macOS B: write the HTTP bytes</h3>
+<pre><code class="language-bash">printf &#39;%s\r\n&#39; &#39;GET /healthz HTTP/1.1&#39; \
+  &#39;Host: status.campuspulse.example&#39; &#39;Connection: close&#39; &#39;&#39; |
+  nc -w 5 127.0.0.1 8081
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Expect 200 for this Host. Repeat with <code>www.campuspulse.example</code> as Host: the same socket now returns 404.</p>
+</blockquote>
+<h3 id="terminal-b-write-the-http-bytes-yourself">Terminal B: write the HTTP bytes yourself</h3>
+<pre><code class="language-powershell">$c = [Net.Sockets.TcpClient]::new(&#39;127.0.0.1&#39;, 8081)
+$c.ReceiveTimeout = 5000
+try {
+  $s = $c.GetStream()
+  $req = &quot;GET /healthz HTTP/1.1`r`nHost: &quot;
+  $req += &quot;status.campuspulse.example`r`nConnection: close`r`n`r`n&quot;
+  $b = [Text.Encoding]::ASCII.GetBytes($req)
+  $s.Write($b, 0, $b.Length)
+  [IO.StreamReader]::new($s).ReadToEnd()
+} finally { $c.Dispose() }
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="lab.html">raw-request lab</a></li>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc9112.html#section-2.1">RFC 9112 §2.1, message format</a></li>
+</ul>
+<h3 id="macos-b-repeat-the-host-experiment">macOS B: repeat the Host experiment</h3>
+<pre><code class="language-bash">url=&#39;http://127.0.0.1:8081/healthz&#39;
+curl --noproxy &#39;*&#39; -i --max-time 5 &quot;$url&quot; \
+  -H &#39;Host: status.campuspulse.example&#39;
+curl --noproxy &#39;*&#39; -i --max-time 5 &quot;$url&quot; \
+  -H &#39;Host: www.campuspulse.example&#39;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The two responses are 200 then 404. Only the Host value changed; no DNS lookup was needed for the numeric destination.</p>
+</blockquote>
+<h3 id="repeat-the-host-experiment-with-curl">Repeat the Host experiment with curl</h3>
+<pre><code class="language-powershell">$url = &#39;http://127.0.0.1:8081/healthz&#39;
+curl.exe --noproxy &#39;*&#39; -i --max-time 5 $url `
+  -H &#39;Host: status.campuspulse.example&#39;
+curl.exe --noproxy &#39;*&#39; -i --max-time 5 $url `
+  -H &#39;Host: www.campuspulse.example&#39;
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/http-faults/fault-1-host-header.txt">host-routing capture</a></li>
+</ul>
+<h3 id="macos-b-follow-the-disappearing-post">macOS B: follow the disappearing POST</h3>
+<pre><code class="language-bash">base=&#39;http://127.0.0.1:8082&#39;
+curl --noproxy &#39;*&#39; -v -L --max-redirs 4 --max-time 5 \
+  -d &#39;service=library-wifi&#39; &quot;$base/legacy/incidents&quot;
+curl --noproxy &#39;*&#39; -v --max-time 5 \
+  -d &#39;service=library-wifi&#39; &quot;$base/api/incidents&quot;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The redirected request changes method and fails; the direct POST gets 201. Read the outgoing method at each hop.</p>
+</blockquote>
+<h3 id="reproduce-the-disappearing-post">Reproduce the disappearing POST</h3>
+<pre><code class="language-powershell">$base = &#39;http://127.0.0.1:8082&#39;
+curl.exe --noproxy &#39;*&#39; -v -L --max-redirs 4 --max-time 5 `
+  -d &#39;service=library-wifi&#39; &quot;$base/legacy/incidents&quot;
+curl.exe --noproxy &#39;*&#39; -v --max-time 5 `
+  -d &#39;service=library-wifi&#39; &quot;$base/api/incidents&quot;
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/http-faults/fault-2-redirect-chain.txt">redirect and method capture</a></li>
+<li>curl — <a href="https://curl.se/docs/manpage.html">redirect behavior</a></li>
+</ul>
+<h3 id="follow-the-request-not-the-success-shaped-story">Follow the request, not the success-shaped story</h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Expected fixture exchange</th><th>Result</th><th>Interpretation</th></tr></thead><tbody><tr><td>Correct <code>Host</code> on port 8081</td><td><code>200</code></td><td>The virtual host is configured</td></tr><tr><td>Unknown <code>Host</code>, same socket</td><td><code>404</code></td><td>DNS is not the changed variable</td></tr><tr><td>POST, then follow a <code>302</code></td><td>GET arrives; <code>405</code></td><td>Redirect behavior changed the method</td></tr><tr><td>Direct POST to the target</td><td><code>201</code></td><td>The target accepts POST in this fixture</td></tr></tbody></table></div>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc9110.html#section-15.4.3">RFC 9110 §15.4.3, 302</a></li>
+<li>Course — <a href="samples/http-faults/fault-server.mjs">fault implementation</a></li>
+</ul>
+<h3 id="macos-b-inspect-the-proxy-mistake">macOS B: inspect the proxy mistake</h3>
+<pre><code class="language-bash">curl --noproxy &#39;*&#39; -I -L --max-redirs 3 --max-time 5 \
+  http://127.0.0.1:8084/healthz
+curl --noproxy &#39;*&#39; -i --max-time 5 \
+  http://127.0.0.1:8083/healthz -H &#39;X-Forwarded-Proto: https&#39;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>The first path loops until curl stops; the corrected header reaches 200. This models a handoff, not real encryption.</p>
+</blockquote>
+<h3 id="locate-the-proxys-protocol-header-mistake">Locate the proxy&#39;s protocol-header mistake</h3>
+<pre><code class="language-powershell">curl.exe --noproxy &#39;*&#39; -I -L --max-redirs 3 --max-time 5 `
+  http://127.0.0.1:8084/healthz
+curl.exe --noproxy &#39;*&#39; -i --max-time 5 `
+  http://127.0.0.1:8083/healthz -H &#39;X-Forwarded-Proto: https&#39;
+</code></pre>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="samples/http-faults/fault-3-x-forwarded-proto.txt">proxy-header capture</a></li>
+</ul>
+<h3 id="macos-stop-or-use-the-recorded-evidence">macOS: stop, or use the recorded evidence</h3>
+<pre><code class="language-bash">samples=&#39;./weeks/week02/samples/http-faults&#39;
+cat &quot;$samples/fault-1-host-header.txt&quot;
+cat &quot;$samples/fault-2-redirect-chain.txt&quot;
+cat &quot;$samples/fault-3-x-forwarded-proto.txt&quot;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Ctrl+C in Terminal A stops all four local listeners. No generated files or network settings need removal.</p>
+</blockquote>
+<h3 id="finish-the-demo-or-open-the-recorded-evidence">Finish the demo or open the recorded evidence</h3>
+<pre><code class="language-powershell">$samples = &#39;.\weeks\week02\samples\http-faults&#39;
+Get-Content &quot;$samples\fault-1-host-header.txt&quot;
+Get-Content &quot;$samples\fault-2-redirect-chain.txt&quot;
+Get-Content &quot;$samples\fault-3-x-forwarded-proto.txt&quot;
+</code></pre>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Press Ctrl+C in Terminal A; that stops all four local listeners.</p>
+</blockquote>
+<h3 id="four-symptoms-name-the-most-likely-cause-and-the-one-command-that-confirms-it">Four symptoms. Name the most likely cause and the one command that confirms it.</h3>
+<ol>
+<li><code>www</code> returns 404; <code>dig</code> shows the CNAME resolving correctly</li>
+<li>A client&#39;s <code>POST</code> returns <code>200</code> but nothing is ever created</li>
+<li>The browser reports too many redirects; <code>curl</code> against the app directly is fine</li>
+<li>Logged-out users are being served a page with someone else&#39;s name on it</li>
+</ol>
+<p><strong>Sources</strong></p>
+<ul>
+<li>IETF — <a href="https://www.rfc-editor.org/rfc/rfc9110.html">RFC 9110, HTTP Semantics</a></li>
+</ul>
+<h2 id="individual-practice">Individual practice</h2>
+<h3 id="guided-lab-trace-delegate-cut-over-speak-http">Guided lab: trace, delegate, cut over, speak HTTP</h3>
+<ul>
+<li><strong>Now, 35 minutes:</strong> on your own domain — trace delegation with <code>dig +trace</code>, add a real record, and watch a TTL count down</li>
+<li><strong>Execute a cutover with a rollback plan</strong>, not just a change</li>
+<li><strong>Then type an HTTP request by hand</strong> and read the response yourself</li>
+<li><strong>Evidence, not a screenshot:</strong> four of five parts feed HW2 directly — save everything as you go</li>
+</ul>
+<blockquote>
+<p><strong>Key idea</strong></p>
+<p>Full instructions and setup checklist: <a href="lab.html"><code>lab.md</code></a>.</p>
+</blockquote>
+<h2 id="homework-brief">Homework brief</h2>
+<h3 id="hw2-zone-build-and-http-forensics">HW2: Zone Build and HTTP Forensics</h3>
+<ul>
+<li><strong>Purpose:</strong> operate the domain you bought in HW1 — configure it deliberately, change it on a plan, diagnose it from evidence</li>
+<li><strong>Deliverables:</strong> an annotated <code>dig +trace</code>, an exported zone file with a rationale per record, and an apex-vs-<code>www</code> decision</li>
+<li><strong>Plus:</strong> resolution proven from two resolvers, an executed TTL cutover with rollback, and three diagnosed HTTP failures</li>
+<li><strong>Full handout and rubric:</strong> <a href="homework.html"><code>homework.md</code></a> — due before Week 3</li>
+</ul>
+<blockquote>
+<p><strong>Tip</strong></p>
+<p>Start tonight — the cutover task has a mandatory wait of at least one TTL, not just active work.</p>
+</blockquote>
+<p><strong>Sources</strong></p>
+<ul>
+<li>Course — <a href="homework.html">HW2 handout</a> · <a href="../../docs/evidence-standard.html">evidence standard</a></li>
+</ul>
+<h2 id="closing-logistics">Closing logistics</h2>
+<h3 id="before-you-go">Before you go</h3>
+<ul>
+<li><strong>Exit ticket:</strong> one sentence — which cache in tonight&#39;s evidence surprised you most</li>
+<li><strong>Before Week 3 class:</strong> complete the <a href="../week03/prep.html">Week 3 prep</a> — items 1–6, about 57 minutes, plus the tooling checklist</li>
+<li><strong>Any logistics question we didn&#39;t reach:</strong> the discussion board, not a hallway guess</li>
+<li><strong>Next week:</strong> what the AI writes — reading TypeScript, React, and containers as a reviewer</li>
+</ul>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

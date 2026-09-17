@@ -1,0 +1,23 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 www.depaul.edu A
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 64647
+;; flags: qr rd ra; QUERY: 1, ANSWER: 3, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;www.depaul.edu.			IN	A
+
+;; ANSWER SECTION:
+www.depaul.edu.		86400	IN	CNAME	22b8cde06cfddd89.vercel-dns-013.com.
+22b8cde06cfddd89.vercel-dns-013.com. 300 IN A	64.239.123.65
+22b8cde06cfddd89.vercel-dns-013.com. 300 IN A	64.239.109.65
+
+;; Query time: 84 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sat Aug 15 19:49:39 UTC 2026
+;; MSG SIZE  rcvd: 124
+

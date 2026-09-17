@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 2 — Pre-Class Prep - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="prep.md" download>Download Markdown source</a></p>
+<h1 id="week-2--pre-class-prep">Week 2 — Pre-Class Prep</h1>
+<p><strong>Budget: ~45 minutes.</strong> Complete before class. The lecture assumes you have done it —
+Block A opens on a real outage and does not re-explain what a recursive resolver is.</p>
+<blockquote>
+<p><strong>Why this is flipped.</strong> Week 2 spends its 180 minutes on the things you cannot get
+from a video: reading real <code>dig</code> output, deciding a TTL, and executing a cutover.
+The vocabulary is your job tonight.</p>
+</blockquote>
+<hr>
+<h2 id="core-prep--do-all-five-44-min">Core prep — do all five (44 min)</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>#</th><th>Resource</th><th>Publisher</th><th>Type</th><th style="text-align:right">Time</th></tr></thead><tbody><tr><td>1</td><td><a href="https://www.youtube.com/watch?v=uOfonONtIuk">How DNS Works</a></td><td>Computerphile (Dr. Mike Pound)</td><td>Video</td><td style="text-align:right">13 min</td></tr><tr><td>2</td><td><a href="https://www.cloudflare.com/learning/dns/what-is-dns/">What is DNS? How does DNS work?</a></td><td>Cloudflare Learning Center</td><td>Article</td><td style="text-align:right">8 min</td></tr><tr><td>3</td><td><a href="https://www.cloudflare.com/learning/dns/dns-records/">DNS Records</a></td><td>Cloudflare Learning Center</td><td>Article</td><td style="text-align:right">10 min</td></tr><tr><td>4</td><td><a href="../../docs/getting-started.html#5-domains-choose-the-no-cost-route-or-your-own-registration">Domains and ownership</a></td><td>Course worked guide</td><td>No purchase/paywall</td><td style="text-align:right">10 min</td></tr><tr><td>5</td><td><a href="https://www.icann.org/en/icann-acronyms-and-terms/registrar-en">Registrar (official definition)</a></td><td>ICANN</td><td>Reference</td><td style="text-align:right">3 min</td></tr></tbody></table></div>
+<p><strong>Accessible alternative:</strong> if Cloudflare items 2–3 or the ICANN glossary will
+not load, use <a href="reference.html#resolution-and-registration-basics">the public course reference</a>
+and its ownership/record table instead. They cover the same required vocabulary;
+substitution earns the same credit and does not add time to the prep budget.
+HTTP 403 from automation or a timeout is not sufficient to label a page dead.</p>
+<h3 id="what-to-look-for-in-each">What to look for in each</h3>
+<p><strong>1 — Computerphile, How DNS Works.</strong> Watch for the <em>sequence</em> of servers, not the
+packet format. When you finish, you should be able to name the four parties a query
+touches in order. If you cannot, rewind the middle five minutes.</p>
+<p><strong>2 — Cloudflare, What is DNS.</strong> Read for the recursive/authoritative distinction.
+Ignore the marketing at the end.</p>
+<p><strong>3 — Cloudflare, DNS Records.</strong> This is your reference table. <strong>Skim</strong> the whole
+thing, then read <code>A</code>, <code>AAAA</code>, <code>CNAME</code>, <code>MX</code>, <code>TXT</code>, <code>NS</code>, <code>SOA</code>, and <code>CAA</code> properly.
+You will use every one of them in the lab. <code>SRV</code> is worth recognising; you will not
+configure one.</p>
+<p><strong>4 — Course domains guide.</strong> Identify registrant, registrar, registry and DNS
+host; choose the no-cost course subdomain or a personally registered name.
+The <a href="https://jvns.ca/blog/2022/04/26/new-zine--how-dns-works-/">Julia Evans zine announcement</a>
+is optional enrichment. Buying the zine or reading unavailable panels is not required.</p>
+<p><strong>5 — ICANN, Registrar.</strong> Three minutes, and it is the authoritative definition rather
+than a vendor&#39;s paraphrase. Note who accredits registrars and who operates registries.</p>
+<hr>
+<h2 id="reference-only--skim-do-not-study-0-min-budgeted">Reference only — skim, do not study (0 min budgeted)</h2>
+<p>These two are <strong>optional lookup references</strong>, not zero-minute required reading.
+Recognition-level DNSSEC/routing vocabulary is introduced in class; configuration
+is not assessed.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>#</th><th>Resource</th><th>Publisher</th><th>Why it is here</th></tr></thead><tbody><tr><td>6</td><td><a href="https://www.cloudflare.com/learning/dns/dnssec/how-dnssec-works/">How DNSSEC works</a></td><td>Cloudflare</td><td>You will see <code>RRSIG</code> and <code>DS</code> records in class; know what they are</td></tr><tr><td>7</td><td><a href="https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/routing-policy.html">Route 53 routing policies</a></td><td>AWS</td><td>The authoritative source on DNS traffic management. Skim the policy list only</td></tr></tbody></table></div>
+<blockquote>
+<p><strong>Optional enrichment, if the reference items interested you:</strong> Slack&#39;s
+<a href="https://slack.engineering/what-happened-during-slacks-dnssec-rollout/">postmortem of their 2021 DNSSEC rollout</a>
+is the best real-world account of why DNSSEC changes are high-stakes. Not required.</p>
+</blockquote>
+<hr>
+<h2 id="come-to-class-with">Come to class with</h2>
+<ul>
+<li><input disabled="" type="checkbox"> Your DNS-host login or assigned course-zone change workflow works.
+Registrar access is needed only for your own registration/delegation.</li>
+<li><input disabled="" type="checkbox"> <strong>Your DNS host console open and authenticated before class starts.</strong> MFA prompts
+cost the lab three minutes it does not have.</li>
+<li><input disabled="" type="checkbox"> <code>dig</code> installed and <code>dig -v</code> printing a version. Install instructions are in
+<a href="lab.html"><code>lab.md</code></a>; do it tonight, not at 6:05 pm.</li>
+<li><input disabled="" type="checkbox"> <code>curl --version</code> working.</li>
+<li><input disabled="" type="checkbox"> <code>node --version</code> showing <strong>24 LTS</strong>.</li>
+<li><input disabled="" type="checkbox"> One question about your own domain that the prep did not answer.</li>
+</ul>
+<hr>
+<h2 id="readiness-check">Readiness check</h2>
+<p>Five questions. Answer before class; we debrief in the first ten minutes.
+Do not look anything up — the point is to find out what you did not absorb.</p>
+<p><strong>Q1.</strong> Your laptop asks <code>1.1.1.1</code> for <code>example.com</code>. <code>1.1.1.1</code> then asks a root
+server, then a <code>.com</code> server, then example.com&#39;s own nameserver. Which of those four
+queries is <em>recursive</em>, and which are <em>iterative</em>?</p>
+<p><strong>Q2.</strong> You bought <code>mysite.example</code> from Namecheap and moved your DNS to Cloudflare.
+You need to change the <code>A</code> record for <code>www</code>. Whose control panel do you open, and why?</p>
+<p><strong>Q3.</strong> A DNS record has a TTL of 3600. You change its value at 09:00. At 09:05, a
+colleague in another country still sees the old value. Give the <em>mechanism</em> that
+explains this, in one sentence. (The phrase &quot;DNS propagation&quot; is not a mechanism.)</p>
+<p><strong>Q4.</strong> What does a <code>CNAME</code> record do, and why can you not put one at the apex
+(the bare <code>mysite.example</code>, with no subdomain)?</p>
+<p><strong>Q5.</strong> Name the record type you would use for each: (a) pointing a name at an IPv6
+address; (b) telling the world which certificate authorities may issue certificates
+for your domain; (c) proving to Google that you control the domain; (d) routing email.</p>
+<hr>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

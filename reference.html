@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 2 public reference — operating names and HTTP - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="reference.md" download>Download Markdown source</a></p>
+<h1 id="week-2-public-reference--operating-names-and-http">Week 2 public reference — operating names and HTTP</h1>
+<p>This is an in-task lookup, not extra assigned prep. Start with the domain and
+supported <code>dig</code> paths in <a href="../../docs/getting-started.html">getting started</a>.
+Use <a href="../../docs/web-foundations.html">web foundations steps 4–6</a> for forms,
+HTTP/JSON, validation and persistence. No private lecture notes are required.</p>
+<h2 id="resolution-and-registration-basics">Resolution and registration basics</h2>
+<p>Suppose a client needs an address for a hostname. Its stub resolver asks a
+recursive resolver to return the result. With no usable cache, that resolver
+asks a root server for the relevant TLD, a TLD server for the domain&#39;s
+authoritative servers, then an authoritative server for the requested record.
+Referrals tell it where to ask next; the terminal answer supplies the data.
+The resolver caches records according to their TTLs. A cached lookup can skip
+much of this walk, and aliases or additional delegations can add steps.</p>
+<p>A registrar manages registration and parent delegation on the registrant&#39;s
+behalf. For generic TLDs in ICANN&#39;s system, registrars are accredited and
+registries operate their TLD under registry arrangements; country-code TLD
+policies can differ. The DNS host serves the actual zone. Buying from a
+registrar does not require buying that company&#39;s hosting, email or certificates.
+Changing a website address belongs at the DNS host; changing delegation belongs
+at the registrar or parent administrator. The table below is the prep&#39;s record
+reference, independent of any vendor website.</p>
+<h2 id="ownership-and-record-decisions">Ownership and record decisions</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Term/record</th><th>Job and boundary</th></tr></thead><tbody><tr><td>Registrant / registrar / registry</td><td>Holder of registration rights / registration service / TLD operator</td></tr><tr><td>DNS host</td><td>Serves the zone&#39;s records; may be separate from the registrar</td></tr><tr><td>A / AAAA</td><td>IPv4 / IPv6 address. Publish AAAA only when that path actually works</td></tr><tr><td>CNAME</td><td>Alias to a hostname, not a scheme, port or path; cannot coexist with ordinary other data at that name</td></tr><tr><td>Apex</td><td>Zone&#39;s root, which needs NS/SOA and therefore cannot be an ordinary CNAME</td></tr><tr><td>ALIAS / flattening</td><td>Provider-specific address synthesis; verify your host&#39;s actual behavior</td></tr><tr><td>TXT</td><td>Public text, such as a non-secret verification nonce; not a place for passwords</td></tr><tr><td>MX</td><td>Mail routing. Null MX (<code>0 .</code>) declares no mail service where supported</td></tr><tr><td>CAA</td><td>Restricts compliant CA issuance, not use of an existing certificate or browser trust</td></tr><tr><td>NS / SOA</td><td>Delegation/authority and zone metadata. A shared-zone leaf may have neither</td></tr><tr><td>SRV</td><td>Advertises a service&#39;s target hostname/port and priority/weight where clients support that service convention; recognition only this week</td></tr></tbody></table></div>
+<p>A course subdomain earns the same credit as a purchased domain. If it is not
+independently delegated, document the parent-zone owner&#39;s role and your
+record-change rights rather than inventing a registrar transaction.</p>
+<h2 id="reading-resolution-evidence">Reading resolution evidence</h2>
+<ul>
+<li>Recursive service returns an answer on a client&#39;s behalf; iterative queries
+follow referrals. <code>dig +trace</code> follows the latter, after bootstrapping root
+information through a resolver.</li>
+<li><code>aa</code> marks an authoritative answer. <code>ra</code> advertises recursion availability;
+it is not proof that this answer required a fresh recursive lookup.</li>
+<li>NOERROR with an empty answer may be NODATA or a referral: inspect SOA versus
+NS in the authority section. NXDOMAIN means the queried name does not exist.</li>
+<li>Negative caching normally uses the smaller of SOA TTL and SOA.MINIMUM.</li>
+<li>Authority TTL minus resolver TTL gives <strong>apparent</strong> cache age. Caps, refresh,
+prefetch and different cache nodes can change the result.</li>
+</ul>
+<p>For a cutover, record the old target and rollback plan; lower TTL; wait out the
+<strong>previous</strong> TTL; change target; compare authority and independent resolvers;
+keep the old service available through overlap. A zone edit does not invalidate
+every recursive cache. Record the actual provider minimum instead of assuming 60.</p>
+<h2 id="http-contract-reminders">HTTP contract reminders</h2>
+<p>An HTTP request has a method, target, headers and sometimes a body. Its response
+has a status, headers and sometimes a body. DNS success does not prove the
+platform recognizes the Host name. A redirect&#39;s method behavior matters:
+307/308 preserve method/body; clients commonly change POST to GET for 301/302.
+Inspect the actual request chain rather than force <code>-X POST</code> through every hop.</p>
+<p>Use status and content type as part of the contract. Validate server inputs even
+when HTML validation exists. A proxy&#39;s forwarded headers are trustworthy only
+within an enforced proxy trust boundary; an untrusted client can supply headers.</p>
+<p>Use the <a href="../../docs/non-ai-review-artifacts.html#hw2---dns-change-plan-draft">HW2 supplied change-plan draft</a>
+for the no-personal-AI critique, connected to your own permitted evidence.</p>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

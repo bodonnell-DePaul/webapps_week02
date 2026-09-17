@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 2 — Captured Evidence - CSC 436</title>
+<link rel="stylesheet" href="../../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../../docs/getting-started.html">Start here</a>
+<a href="../../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../../docs/course-map.html">Course map</a>
+<a href="../../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="README.md" download>Download Markdown source</a></p>
+<h1 id="week-2--captured-evidence">Week 2 — Captured Evidence</h1>
+<p>Every terminal transcript quoted in the Week 2 decks was captured live from real resolvers
+and a real local server. <strong>Nothing here is fabricated.</strong> Where a slide shows less than the
+full capture, the slide says so and the complete output is here.</p>
+<p><strong>Captured:</strong> 2026-08-15, from a residential connection in the US Pacific time zone.
+Times in the transcripts are UTC.</p>
+<blockquote>
+<p><strong>Reproducibility note.</strong> These are live-network captures. TTL remainders, anycast node
+selection, and CDN-steered addresses <strong>will differ</strong> when you re-run them, and that is
+the point of several of the slides. The <em>shapes</em> — flag combinations, referral
+structure, section contents — are stable.</p>
+</blockquote>
+<hr>
+<h2 id="dns--resolution-path">DNS — resolution path</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>File</th><th>Command</th><th>What it shows</th></tr></thead><tbody><tr><td><code>dig-trace-depaul.txt</code></td><td><code>dig -4 @1.1.1.1 +trace depaul.edu A</code></td><td>The full delegation walk: root hints → <code>edu.</code> referral → <code>depaul.edu</code> referral → the answer</td></tr><tr><td><code>dig-iter-1-root.txt</code></td><td><code>dig @a.root-servers.net depaul.edu A +norecurse</code></td><td>A root referral. <code>flags: qr</code>, <code>ANSWER: 0</code>, <code>AUTHORITY: 13</code>, plus glue</td></tr><tr><td><code>dig-iter-2-tld.txt</code></td><td><code>dig @a.edu-servers.net depaul.edu A +norecurse</code></td><td>The <code>edu.</code> referral to DePaul&#39;s four nameservers at TTL 172800</td></tr><tr><td><code>dig-iter-3-auth.txt</code></td><td><code>dig @ns1.depaul.edu depaul.edu A +norecurse</code></td><td>The authoritative answer. <code>flags: qr aa</code>, <code>ANSWER: 1</code></td></tr><tr><td><code>dig-iter-root.txt</code></td><td>(first exploratory capture)</td><td>Kept for provenance; superseded by <code>dig-iter-1-root.txt</code></td></tr><tr><td><code>dig-recursive-vs-authoritative.txt</code></td><td>both of the above, side by side</td><td><code>qr rd ra</code> + falling TTL vs <code>qr aa</code> + zone TTL. <strong>The block&#39;s key diagnostic.</strong></td></tr></tbody></table></div>
+<h2 id="dns--caching">DNS — caching</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>File</th><th>What it shows</th></tr></thead><tbody><tr><td><code>os-cache-ttl-windows.txt</code></td><td>The Windows stub-resolver cache counting down 30 → 24 → 19 → 14 → 9 → 4 for <code>docs.github.com</code>. The cleanest TTL demonstration in the week.</td></tr><tr><td><code>ttl-countdown.txt</code></td><td>The same idea against a <em>public</em> resolver, where anycast makes the countdown non-monotonic. Honest, and a teaching point in itself.</td></tr><tr><td><code>dig-anycast-cache-nodes.txt</code></td><td>Six back-to-back queries to <code>1.1.1.1</code> returning different TTL remainders — proof that one resolver address is many independent caches.</td></tr><tr><td><code>dig-cache-probe.txt</code></td><td><code>+norecurse</code> against a recursive resolver. An answer with <code>flags: qr ra</code> (no <code>rd</code>) proves the response came from cache.</td></tr><tr><td><code>dig-nxdomain.txt</code></td><td>NXDOMAIN with an SOA in AUTHORITY at TTL 900 — negative caching, bounded by the SOA <code>minimum</code>.</td></tr><tr><td><code>dig-split-answers.txt</code></td><td>The same name queried at 1.1.1.1, 8.8.8.8, and 9.9.9.9. Different TTL remainders <strong>and</strong> a different address from Quad9.</td></tr></tbody></table></div>
+<h2 id="dns--zone-records">DNS — zone records</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>File</th><th>What it shows</th></tr></thead><tbody><tr><td><code>dig-soa-depaul.txt</code></td><td>The SOA, with all seven fields. <code>minimum</code> = 900, matching the negative-cache TTL above.</td></tr><tr><td><code>dig-ns-depaul.txt</code></td><td>The child zone&#39;s own NS RRset at TTL 1800/14400 — compare with the parent&#39;s 172800.</td></tr><tr><td><code>dig-mx-depaul.txt</code></td><td>A single MX with priority 0 pointing at a <em>name</em>, not an address.</td></tr><tr><td><code>dig-txt-depaul.txt</code></td><td>21 TXT records, including an SPF record split into two quoted chunks (the 255-character rule) and 16 vendor domain-verification strings. Note <code>;; Truncated, retrying in TCP mode.</code></td></tr><tr><td><code>dig-caa-depaul.txt</code></td><td><strong>NODATA</strong> — <code>NOERROR</code> with <code>ANSWER: 0</code> and an SOA in AUTHORITY. No CAA policy exists, so any CA may issue.</td></tr><tr><td><code>dig-caa-github.txt</code></td><td>Seven CAA records, showing <code>issue</code> and <code>issuewild</code> in use.</td></tr><tr><td><code>dig-www-depaul.txt</code></td><td>A CNAME to a platform-generated hostname at TTL 86400, whose A records carry TTL 300 — each link cached independently.</td></tr><tr><td><code>dig-cname-chain.txt</code></td><td>Four A records at TTL 30 for <code>docs.github.com</code>.</td></tr><tr><td><code>dig-jvns-a.txt</code>, <code>dig-jvns-ns.txt</code></td><td>A small independently-operated domain, for contrast with an institutional one.</td></tr></tbody></table></div>
+<h2 id="dns-over-https">DNS over HTTPS</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>File</th><th>What it shows</th></tr></thead><tbody><tr><td><code>doh-json.txt</code></td><td>Cloudflare&#39;s JSON DoH API. Note <code>Status</code>, <code>RD</code>, <code>RA</code>, <code>TTL</code> — the same fields <code>dig</code> prints. <strong>This is a vendor convenience API, not RFC 8484</strong>, which uses <code>application/dns-message</code>.</td></tr><tr><td><code>doh-wire.txt</code></td><td>The same request with <code>curl -v</code>: port 443, ALPN <code>h2</code>, an ordinary <code>GET</code>.</td></tr></tbody></table></div>
+<h2 id="http">HTTP</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>File</th><th>What it shows</th></tr></thead><tbody><tr><td><code>http-redirect-chain-real.txt</code></td><td>A real redirect in the wild: <code>depaul.edu</code> → <code>www.depaul.edu</code> via <strong>307</strong>, with <code>num_redirects</code> from curl&#39;s write-out.</td></tr><tr><td><code>http-headers-real.txt</code></td><td>Real response headers including <code>vary: Accept-Encoding</code>, <code>content-encoding: gzip</code>, <code>cache-status</code>, <code>etag</code>, and HSTS. <strong>Sanitized</strong> — see below.</td></tr><tr><td><code>http-faults/</code></td><td>The three HW2 fault artifacts and the server that produces them. See <a href="http-faults/index.html"><code>http-faults/README.md</code></a>.</td></tr></tbody></table></div>
+<hr>
+<h2 id="redaction">Redaction</h2>
+<p><code>http-headers-real.txt</code> was captured from live public websites and then sanitized before
+being committed:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Value</th><th>Action</th></tr></thead><tbody><tr><td><code>set-cookie: __cf_bm=...</code></td><td>Replaced with <code>REDACTED-BOT-MANAGEMENT-COOKIE</code>; <strong>attributes preserved</strong>, because the attributes are the evidence</td></tr><tr><td><code>cf-ray</code></td><td>Replaced with <code>REDACTED</code></td></tr><tr><td><code>x-nf-request-id</code></td><td>Replaced with <code>REDACTED</code></td></tr></tbody></table></div>
+<p>Nothing else was altered. This is the same redaction discipline HW2 requires: <strong>replace
+values, keep their shape.</strong></p>
+<hr>
+<h2 id="reproducing-these">Reproducing these</h2>
+<pre><code class="language-bash"># The delegation walk. Add -4 if your network has no IPv6 route.
+dig +trace depaul.edu A
+
+# One hop at a time.
+dig @a.root-servers.net depaul.edu A +norecurse
+dig @a.edu-servers.net  depaul.edu A +norecurse
+dig @ns1.depaul.edu     depaul.edu A +norecurse
+
+# Recursive vs authoritative — read the flags and the TTL.
+dig @1.1.1.1 depaul.edu A
+dig @ns1.depaul.edu depaul.edu A +norecurse
+
+# Negative caching. The AUTHORITY SOA TTL is the negative-cache lifetime.
+dig @1.1.1.1 nonexistent-week2-demo.depaul.edu A
+
+# Three resolvers, one name. Expect disagreement.
+for r in 1.1.1.1 8.8.8.8 9.9.9.9; do
+  dig @$r www.microsoft.com A +noall +answer
+done
+
+# DoH, which is just an HTTPS GET.
+curl -s -H &quot;accept: application/dns-json&quot; \
+  &quot;https://cloudflare-dns.com/dns-query?name=depaul.edu&amp;type=A&quot;
+</code></pre>
+<p>Windows OS-cache countdown, which needs no <code>dig</code>:</p>
+<pre><code class="language-powershell">Clear-DnsClientCache
+Resolve-DnsName docs.github.com -Type A | Out-Null
+1..6 | ForEach-Object {
+  Get-DnsClientCache -Entry docs.github.com | Where-Object Type -eq 1 |
+    Select-Object -First 1 Entry, TimeToLive, Data
+  Start-Sleep 5
+}
+</code></pre>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

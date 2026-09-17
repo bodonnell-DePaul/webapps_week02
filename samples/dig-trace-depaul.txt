@@ -1,0 +1,54 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 +trace depaul.edu A
+; (1 server found)
+;; global options: +cmd
+.			516715	IN	NS	a.root-servers.net.
+.			516715	IN	NS	b.root-servers.net.
+.			516715	IN	NS	c.root-servers.net.
+.			516715	IN	NS	d.root-servers.net.
+.			516715	IN	NS	e.root-servers.net.
+.			516715	IN	NS	f.root-servers.net.
+.			516715	IN	NS	g.root-servers.net.
+.			516715	IN	NS	h.root-servers.net.
+.			516715	IN	NS	i.root-servers.net.
+.			516715	IN	NS	j.root-servers.net.
+.			516715	IN	NS	k.root-servers.net.
+.			516715	IN	NS	l.root-servers.net.
+.			516715	IN	NS	m.root-servers.net.
+.			516715	IN	RRSIG	NS 8 0 518400 20260828170000 20260815160000 57780 . wbOnOsN+DE6IT/SKeRZXUQL8Tk6UTCZaQBvEIdE9avVAhcf6gfIkeZCw qw1kyEPtWHV7YepnFaw59SMI3DkPrCrkVWGJ0sOSTXYtjy7FXx9fbpXg A87FZE8j+Tz6XNdz4/RMRJUBtvrf0UnG7eR4j/z/Jwu6QsG14gzYhYPb N5SxHNSnw6n4I+lgSdvjpL3UgfOnj8bS0vqMEVKcaXjfvpr04+0LvgoF ZayoaeH9fudKvOn7uqEAUNf6lrvz8iqZ0CF8SxSoayL8kP5Ybk2kdOsB 98u2XTLOzGgTgTk7iUTcx8wckffwl5FhSKxvyt/W7jX/kdswCm+qo7iT tOABtg==
+;; Received 525 bytes from 1.1.1.1#53(1.1.1.1) in 8 ms
+
+edu.			172800	IN	NS	f.edu-servers.net.
+edu.			172800	IN	NS	j.edu-servers.net.
+edu.			172800	IN	NS	a.edu-servers.net.
+edu.			172800	IN	NS	l.edu-servers.net.
+edu.			172800	IN	NS	m.edu-servers.net.
+edu.			172800	IN	NS	c.edu-servers.net.
+edu.			172800	IN	NS	e.edu-servers.net.
+edu.			172800	IN	NS	b.edu-servers.net.
+edu.			172800	IN	NS	d.edu-servers.net.
+edu.			172800	IN	NS	h.edu-servers.net.
+edu.			172800	IN	NS	g.edu-servers.net.
+edu.			172800	IN	NS	i.edu-servers.net.
+edu.			172800	IN	NS	k.edu-servers.net.
+edu.			86400	IN	DS	35663 13 2 A2E1614291831A4746B5AC52B4B345357687271E85353082741F1CF3 D06A4C1D
+edu.			86400	IN	RRSIG	DS 8 1 86400 20260828170000 20260815160000 57780 . vEJwsCzq98ihdI6xZK2sP9ifz4CwKHbfe3dyvlLt4RmmNaZcDds+AwZW +boLDQAZrbs0hvAu11f0EQ8PCpJMU2/kIyAKP+dMIYy61DiADA9Fu9Do YDIFlfrXnHweKi1Wc/Ks912fnKUo/lqkCNKhfm67U34Euu2t+558q89J C9ypCDJy5H8hNR+H6GSpC+7tqNMMMpKPNExpBjwdfjdvL2V3K+jhwXyd xca2Sm9kxUfapl/3VYAOaawmhP7DrkBDrwXgCp6JhHHClM06l6VRsslL cat/2382DEGW4JaHRBNkOZCHDbNEzAFozmSUOeb4Zy9jQ99xWdvYJ1Jc gqfr3A==
+;; Received 1197 bytes from 192.33.4.12#53(c.root-servers.net) in 32 ms
+
+depaul.edu.		172800	IN	NS	ns2.depaul.edu.
+depaul.edu.		172800	IN	NS	ns1.depaul.edu.
+depaul.edu.		172800	IN	NS	ns4.depaul.edu.
+depaul.edu.		172800	IN	NS	ns3.depaul.edu.
+9DHS4EP5G85PF9NUFK06HEK0O48QGK77.edu. 900 IN NSEC3 1 1 0 - 9IRJMUEL398SEJH8CRDIK2H2K85K5243 NS SOA RRSIG DNSKEY NSEC3PARAM
+9DHS4EP5G85PF9NUFK06HEK0O48QGK77.edu. 900 IN RRSIG NSEC3 13 2 900 20260820033619 20260813022619 6705 edu. 1ydp3989AA3trH/Lg/t1SxbUsbGwLm/40NuKtVTmc0sFXGm1BMHnR/9c hB72EMs06P5taeYgsM8popTxGkj2iA==
+QCPFMOBJDP7PFAOM63VTFVATPFNKL9FK.edu. 900 IN NSEC3 1 1 0 - QK6M0S7V1SKN8MFIVRVL3AAD68OJPE85 NS DS RRSIG
+QCPFMOBJDP7PFAOM63VTFVATPFNKL9FK.edu. 900 IN RRSIG NSEC3 13 2 900 20260822033238 20260815022238 6705 edu. HcokvDN6Eqr59unUQDGKdOThqYgFktBTfPaUXdvsQnjJ74lNuFNAPm1u XHAx2N6a75pFgb+MoVg+gU1tJN1cAQ==
+;; Received 532 bytes from 192.33.14.30#53(b.edu-servers.net) in 68 ms
+
+depaul.edu.		86400	IN	A	64.239.109.1
+depaul.edu.		14400	IN	NS	ns3.depaul.edu.
+depaul.edu.		14400	IN	NS	ns1.depaul.edu.
+depaul.edu.		14400	IN	NS	ns4.depaul.edu.
+depaul.edu.		14400	IN	NS	ns2.depaul.edu.
+;; Received 219 bytes from 140.192.0.2#53(ns1.depaul.edu) in 56 ms
+

@@ -1,0 +1,30 @@
+$ curl -sSI https://www.rfc-editor.org/rfc/rfc9110.html
+HTTP/2 200 
+date: Sat, 15 Aug 2026 19:57:48 GMT
+content-type: text/html
+access-control-allow-origin: *
+link: <https://www.rfc-editor.org/info/rfc9110/>; rel="canonical"
+cf-r2-served: 1
+set-cookie: __cf_bm=REDACTED-BOT-MANAGEMENT-COOKIE; HttpOnly; SameSite=None; Secure; Path=/; Domain=rfc-editor.org; Expires=Sat, 15 Aug 2026 20:27:48 GMT
+etag: W/"0d9f5fb8eb38d3c08b055f9b0671d68b"
+server: cloudflare
+cf-ray: REDACTED
+alt-svc: h3=":443"; ma=86400
+
+
+$ curl -sSI -H "Accept-Encoding: gzip" https://jvns.ca/
+HTTP/2 200 
+accept-ranges: bytes
+age: 0
+cache-control: public,max-age=0,must-revalidate
+cache-status: "Netlify Edge"; fwd=miss; fwd-status=200; stored
+content-encoding: gzip
+content-type: text/html; charset=UTF-8
+date: Sat, 15 Aug 2026 19:57:49 GMT
+etag: "6008c0f02c21b4ab160180f6d8a36d15-ssl-df"
+server: Netlify
+strict-transport-security: max-age=31536000
+vary: Accept-Encoding
+x-nf-request-id: REDACTED
+
+

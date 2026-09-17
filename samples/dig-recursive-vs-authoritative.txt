@@ -1,0 +1,58 @@
+### recursive resolver (1.1.1.1)
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 depaul.edu A
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 60804
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;depaul.edu.			IN	A
+
+;; ANSWER SECTION:
+depaul.edu.		85555	IN	A	64.239.109.1
+
+;; Query time: 12 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sat Aug 15 19:48:57 UTC 2026
+;; MSG SIZE  rcvd: 55
+
+
+### authoritative server, no recursion (ns1.depaul.edu)
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @ns1.depaul.edu depaul.edu A +norecurse
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 37664
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 4, ADDITIONAL: 5
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 063f58a948d0ad783fe2b78d6a80c2a908d7d439e4399e2f (good)
+;; QUESTION SECTION:
+;depaul.edu.			IN	A
+
+;; ANSWER SECTION:
+depaul.edu.		86400	IN	A	64.239.109.1
+
+;; AUTHORITY SECTION:
+depaul.edu.		14400	IN	NS	ns1.depaul.edu.
+depaul.edu.		14400	IN	NS	ns4.depaul.edu.
+depaul.edu.		14400	IN	NS	ns2.depaul.edu.
+depaul.edu.		14400	IN	NS	ns3.depaul.edu.
+
+;; ADDITIONAL SECTION:
+ns4.depaul.edu.		14400	IN	A	168.61.185.108
+ns3.depaul.edu.		14400	IN	A	140.192.141.178
+ns2.depaul.edu.		14400	IN	A	140.192.239.2
+ns1.depaul.edu.		14400	IN	A	140.192.0.2
+
+;; Query time: 56 msec
+;; SERVER: 140.192.0.2#53(ns1.depaul.edu) (UDP)
+;; WHEN: Sat Aug 15 19:48:57 UTC 2026
+;; MSG SIZE  rcvd: 219
+

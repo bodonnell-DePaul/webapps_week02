@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Week 2 Lab — Trace, Delegate, Cut Over, and Speak HTTP - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="lab.md" download>Download Markdown source</a></p>
+<h1 id="week-2-lab--trace-delegate-cut-over-and-speak-http">Week 2 Lab — Trace, Delegate, Cut Over, and Speak HTTP</h1>
+<p><strong>35 minutes. Work individually, on your domain or assigned course subdomain.</strong></p>
+<p>Commands start at the <strong>course content root</strong> (student release; <code>instructor</code> for
+authors). Continue <a href="../../docs/web-foundations.html">web foundations steps 4–6</a>
+within the HW2 work budget; this is not extra prep.</p>
+<blockquote>
+<p><strong>Setup happens before class, not during it</strong> — see the checklist below. The 35 minutes
+is 7 + 4 + 7 + 9 + 6, plus two minutes of slack.</p>
+</blockquote>
+<blockquote>
+<p><strong>What you leave with.</strong> A <code>dig +trace</code> transcript, a working record in a zone you
+control, a measured TTL countdown, an executed cutover with a rollback, and an HTTP
+request you typed with your own hands. Four of the five are HW2 evidence — save
+everything.</p>
+</blockquote>
+<hr>
+<h2 id="before-you-start-pre-class-not-lab-time">Before you start (pre-class, not lab time)</h2>
+<p><strong>Do all of this before you walk in.</strong> The 35 minutes assumes it is already done.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>You need</th><th>Check it</th></tr></thead><tbody><tr><td>Your domain or assigned course subdomain</td><td>DNS edit access or the course-zone change workflow works</td></tr><tr><td><strong>Your DNS host console open and authenticated</strong></td><td>Do this <em>before</em> class. MFA prompts cost the lab three minutes.</td></tr><tr><td><code>dig</code> or full-credit trace fallback</td><td><code>dig -v</code> prints a version on your approved local/course shell</td></tr><tr><td><code>curl</code></td><td><code>curl --version</code> (on Windows PowerShell, <code>curl.exe --version</code>)</td></tr><tr><td><code>nc</code>, or the PowerShell fallback</td><td><code>which nc</code> — Part 5.2 has a no-<code>nc</code> path</td></tr><tr><td>Node 24 LTS</td><td><code>node --version</code> — for Part 5</td></tr><tr><td>This repository</td><td>You can <code>cd</code> to its root; Part 5 uses a repo-relative path</td></tr><tr><td>A scratch file</td><td><code>week02-lab.md</code> — paste every command <strong>and</strong> its output</td></tr></tbody></table></div>
+<h3 id="installing-dig">Installing <code>dig</code></h3>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Platform</th><th>How</th></tr></thead><tbody><tr><td><strong>Windows</strong></td><td>Use existing approved WSL with <code>sudo apt update</code> and <code>sudo apt install dnsutils</code>, or the assigned course Linux shell. Current native ISC Windows BIND packages are not supplied.</td></tr><tr><td>macOS</td><td>Built in. If missing: <code>brew install bind</code></td></tr><tr><td>Debian/Ubuntu/WSL</td><td><code>sudo apt install dnsutils</code></td></tr><tr><td>Fedora/RHEL</td><td><code>sudo dnf install bind-utils</code></td></tr></tbody></table></div>
+<blockquote>
+<p><strong>No admin rights or direct DNS access?</strong> Follow the
+<a href="../../docs/getting-started.html#6-dig-without-an-obsolete-windows-installer">supported fallback</a>.
+Analyze <code>samples/dig-trace-depaul.txt</code> and the three <code>dig-iter-*</code> exchanges,
+labeled as supplied evidence, then record your own DNS-console/native resolver
+observations. This is full credit. An ordinary online lookup, DoH response or
+<code>Resolve-DnsName</code> answer is not evidence of an iterative <code>+trace</code>.</p>
+</blockquote>
+<blockquote>
+<p><strong><code>nc</code> for Part 5</strong> is present on macOS and most Linux distributions but <strong>not</strong> on
+Windows and not on every minimal WSL image. Check with <code>which nc</code>. If it is missing,
+use the PowerShell <code>TcpClient</code> block in Part 5.2 — it needs nothing extra.</p>
+</blockquote>
+<blockquote>
+<p><strong>PowerShell users:</strong> <code>curl</code> is an alias for <code>Invoke-WebRequest</code> in Windows
+PowerShell 5.1 and does <strong>not</strong> accept curl&#39;s flags. Type <strong><code>curl.exe</code></strong> explicitly
+throughout this lab. In PowerShell 7 the alias is gone, but <code>curl.exe</code> is still
+unambiguous.</p>
+</blockquote>
+<hr>
+<h2 id="part-1--trace-the-delegation-from-the-root-7-min">Part 1 — Trace the delegation from the root (7 min)</h2>
+<p>You are going to watch a resolver do its job, one referral at a time.</p>
+<h3 id="11-the-whole-path-in-one-command">1.1 The whole path in one command</h3>
+<pre><code class="language-bash">dig +trace depaul.edu A
+</code></pre>
+<p><strong>Expected shape</strong> — four groups, each ending in a <code>;; Received … from</code> line:</p>
+<pre><code>.             518400  IN  NS  a.root-servers.net.        &lt;- root hints
+;; Received … from 1.1.1.1#53(1.1.1.1)
+
+edu.          172800  IN  NS  a.edu-servers.net.         &lt;- root referral
+;; Received … from 192.203.230.10#53(e.root-servers.net)
+
+depaul.edu.   172800  IN  NS  ns1.depaul.edu.            &lt;- edu referral
+;; Received … from 192.5.6.30#53(a.edu-servers.net)
+
+depaul.edu.    86400  IN  A   64.239.109.1               &lt;- the answer
+;; Received … from 140.192.141.178#53(ns3.depaul.edu)
+</code></pre>
+<p><strong>Record in your file:</strong> which server answered each of the four groups.</p>
+<blockquote>
+<p><strong>If it stalls after the first group</strong>, try <code>dig -4 +trace depaul.edu A</code>.
+Missing IPv6 reachability is one hypothesis; direct DNS filtering, packet loss
+or an unreachable authority are others. Use the fallback rather than infer a cause.</p>
+</blockquote>
+<h3 id="12-now-do-it-by-hand-one-hop-at-a-time">1.2 Now do it by hand, one hop at a time</h3>
+<p>Run these three. Each one asks a <em>different</em> server the <em>same</em> question.</p>
+<pre><code class="language-bash">dig @a.root-servers.net depaul.edu A +norecurse
+dig @a.edu-servers.net  depaul.edu A +norecurse
+dig @ns1.depaul.edu     depaul.edu A +norecurse
+</code></pre>
+<p><strong>Record for each:</strong> the <code>flags:</code> line and the <code>ANSWER:</code> count.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Server</th><th>Expected flags</th><th>Expected <code>ANSWER:</code></th></tr></thead><tbody><tr><td>Root</td><td><code>qr</code></td><td><code>0</code> — a referral</td></tr><tr><td>TLD</td><td><code>qr</code></td><td><code>0</code> — a referral</td></tr><tr><td>Authoritative</td><td><code>qr aa</code></td><td><code>1</code> — the answer</td></tr></tbody></table></div>
+<blockquote>
+<p><strong><code>+norecurse</code> is what makes this readable.</strong> Without it, dig sets <code>rd</code> and the root and
+TLD servers simply do not offer recursion — you get the same referral, but with an
+extra flag muddying the comparison.</p>
+</blockquote>
+<p><strong>✅ Checkpoint 1.</strong> In your file, write one sentence answering: <em>which of those three
+servers set the <code>aa</code> flag, and what does that flag entitle you to conclude?</em></p>
+<hr>
+<h2 id="part-2--recursive-vs-authoritative-and-the-age-of-a-cache-4-min">Part 2 — Recursive vs authoritative, and the age of a cache (4 min)</h2>
+<h3 id="21-ask-a-recursive-resolver-the-same-question">2.1 Ask a recursive resolver the same question</h3>
+<pre><code class="language-bash">dig @1.1.1.1 depaul.edu A
+</code></pre>
+<p>Compare its header to the authoritative one from 1.2:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th></th><th>Recursive (<code>@1.1.1.1</code>)</th><th>Authoritative (<code>@ns1.depaul.edu</code>)</th></tr></thead><tbody><tr><td>Flags</td><td><code>qr rd ra</code></td><td><code>qr aa</code></td></tr><tr><td>TTL</td><td><strong>below</strong> 86400, falling</td><td>exactly 86400, always</td></tr></tbody></table></div>
+<h3 id="22-measure-how-old-that-cache-entry-is">2.2 Measure how old that cache entry is</h3>
+<p>Read the authoritative TTL <strong>in the same session</strong> — do not assume the configured value
+is the value being served.</p>
+<pre><code>authoritative 86400 − resolver-reported 85555 = ~845 s since that cache refreshed
+</code></pre>
+<p><strong>Record:</strong> your own subtraction, with both numbers, and call it an <em>apparent</em> cache age
+— resolvers may cap, prefetch, or serve stale.</p>
+<h3 id="23-prove-a-cache-exists-without-changing-anything">2.3 Prove a cache exists without changing anything</h3>
+<pre><code class="language-bash">dig @1.1.1.1 example.com A +norecurse
+</code></pre>
+<p>You asked a recursive resolver <strong>not</strong> to recurse. If it answers anyway, the answer
+came from its cache. If it returns <code>ANSWER: 0</code>, the name was not cached and it
+declined to go find out.</p>
+<p><strong>✅ Checkpoint 2.</strong> Run <code>dig @1.1.1.1 depaul.edu A</code> three times in a row. Do the TTLs
+decrease monotonically? Write down what you see. <em>(They may not — <code>1.1.1.1</code> is an
+anycast address and consecutive queries can land on different cache nodes. Either
+result is correct; the observation is the point.)</em></p>
+<hr>
+<h2 id="part-3--configure-your-own-zone-and-watch-a-ttl-expire-7-min">Part 3 — Configure your own zone and watch a TTL expire (7 min)</h2>
+<p><strong>Continue working on your own domain</strong> — the one you configured in HW1.</p>
+<blockquote>
+<p><strong>Never share your DNS credentials with anyone, including classmates.</strong></p>
+</blockquote>
+<blockquote>
+<p><strong>You should already be logged in to your DNS host</strong> — it was on the pre-class
+checklist. If you are not, log in now before continuing.</p>
+</blockquote>
+<h3 id="31-find-out-who-is-authoritative-for-your-domain">3.1 Find out who is authoritative for your domain</h3>
+<pre><code class="language-bash">dig NS yourdomain.example +short
+dig SOA yourdomain.example +short
+</code></pre>
+<p>The <code>NS</code> answer names your DNS host. If it is not the company you <em>think</em> is hosting
+your DNS, <strong>you have been editing a zone nobody consults.</strong></p>
+<blockquote>
+<p><strong>Do not try to fix delegation during the lab.</strong> Changing nameservers is a change with
+a two-day parent TTL; it cannot complete in 35 minutes. Use the instructor&#39;s fallback
+subdomain for Parts 3 and 4 instead, note the finding in your file, and repair your own
+domain after class.</p>
+</blockquote>
+<h3 id="32-create-one-record">3.2 Create one record</h3>
+<p>In your DNS host&#39;s console, create:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Name</th><th>Type</th><th>Value</th><th>TTL</th><th>Proxy</th></tr></thead><tbody><tr><td><code>lab</code></td><td><code>A</code></td><td><code>203.0.113.10</code></td><td><strong>60</strong></td><td><strong>DNS only / unproxied</strong></td></tr></tbody></table></div>
+<p><code>203.0.113.0/24</code> is an RFC 5737 documentation range, not a deployment target.
+This is a DNS-only exercise; do not send application traffic to it.</p>
+<blockquote>
+<p><strong>Cloudflare users: grey cloud, not orange.</strong> A <em>proxied</em> record ignores your TTL,
+reports <code>Auto</code>, and returns Cloudflare&#39;s own addresses instead of yours — so every
+measurement in Parts 3 and 4 would be of something you did not configure. Any proxying
+host behaves the same way.</p>
+<p>If your host will not accept a TTL of 60, use its minimum and record it.
+Keep the 35-minute lab cap: start the change here and finish the timed observation
+in HW2, or use supplied countdown/cutover evidence with honest provenance.</p>
+</blockquote>
+<blockquote>
+<p><strong>Do not query this name before you create it.</strong> A lookup for a name that does
+not exist yet installs a <em>negative</em> cache entry, and you will then wait out the SOA
+negative TTL before your new record becomes visible. This is the single most common
+way to lose ten minutes in this lab.</p>
+</blockquote>
+<h3 id="33-verify-from-the-authoritative-server-first">3.3 Verify from the authoritative server first</h3>
+<pre><code class="language-bash">dig +trace lab.yourdomain.example A
+</code></pre>
+<p><code>+trace</code> walks the delegation from the root and never consults a recursive cache for
+your name, so it shows you the truth immediately. (Its <em>first</em> query — the root
+nameserver list — does go to your configured resolver; everything after that is direct.)
+If this does not show your record, the record is wrong — not cached.</p>
+<p>Note the TTL that <code>+trace</code> reports: it is <strong>60</strong>, the zone value, every time.
+Authoritative answers normally report the configured TTL; synthesized/provider
+answers can differ. Record what yours serves rather than force the example number.</p>
+<h3 id="34-watch-the-ttl-count-down">3.4 Watch the TTL count down</h3>
+<pre><code class="language-bash">dig @1.1.1.1 lab.yourdomain.example A +noall +answer
+# wait 20 seconds
+dig @1.1.1.1 lab.yourdomain.example A +noall +answer
+# wait 20 seconds
+dig @1.1.1.1 lab.yourdomain.example A +noall +answer
+# wait 25 seconds — past expiry
+dig @1.1.1.1 lab.yourdomain.example A +noall +answer
+</code></pre>
+<p><strong>Expected:</strong> <code>60</code> → roughly <code>40</code> → roughly <code>20</code> → back to <code>60</code> after it expires and the
+resolver re-fetches.</p>
+<p><strong>Record:</strong> the sequence, with timestamps.</p>
+<p><strong>✅ Checkpoint 3.</strong> Write one sentence: <em>if this record had a TTL of 3600 instead, and
+you had to change it in five minutes, what would you have needed to do an hour ago?</em></p>
+<hr>
+<h2 id="part-4--execute-a-cutover-with-a-rollback-9-min">Part 4 — Execute a cutover with a rollback (9 min)</h2>
+<p>You have a record at TTL 60. That is a deliberately open rollback window. Use it.</p>
+<h3 id="41-write-the-plan-before-you-touch-anything">4.1 Write the plan <strong>before</strong> you touch anything</h3>
+<p>Copy this into your file and fill it in:</p>
+<pre><code class="language-text">CUTOVER PLAN — lab.yourdomain.example
+  Current value : 203.0.113.10        &lt;- write this down first. This is your rollback.
+  New value     : 198.51.100.20
+  Current TTL   : 60  (lowered at HH:MM, already in effect)
+  Change at     : HH:MM
+  Verify by     : dig @1.1.1.1 ... and dig @8.8.8.8 ... and dig +trace ...
+  Success means : both resolvers return 198.51.100.20
+  Rollback if   : either resolver still returns the old value after 3 minutes
+  Rollback = restore 203.0.113.10; expected live within 60 s
+</code></pre>
+<h3 id="42-capture-the-before-state">4.2 Capture the before-state</h3>
+<pre><code class="language-bash">dig @1.1.1.1 lab.yourdomain.example A +noall +answer
+dig @8.8.8.8 lab.yourdomain.example A +noall +answer
+</code></pre>
+<h3 id="43-make-the-change">4.3 Make the change</h3>
+<p>Change <code>lab</code> to <code>198.51.100.20</code>. Note the wall-clock time. <strong>Change nothing else.</strong></p>
+<blockquote>
+<p>Timestamps: <code>date -u</code> on macOS/Linux/WSL. In PowerShell use
+<code>(Get-Date).ToUniversalTime().ToString(&#39;HH:mm:ss&#39;) + &#39;Z&#39;</code>.</p>
+</blockquote>
+<h3 id="44-verify-from-two-independent-resolvers-plus-the-source-of-truth">4.4 Verify from two independent resolvers plus the source of truth</h3>
+<pre><code class="language-bash">dig @1.1.1.1 lab.yourdomain.example A +noall +answer
+dig @8.8.8.8 lab.yourdomain.example A +noall +answer
+dig +trace   lab.yourdomain.example A | tail -n 5
+</code></pre>
+<blockquote>
+<p><strong>Windows PowerShell:</strong> <code>tail</code> is an alias for <code>Get-Content</code> and will reject <code>-n 5</code>.
+Use <code>dig +trace lab.yourdomain.example A | Select-Object -Last 5</code> instead.</p>
+</blockquote>
+<p>Repeat every 30 seconds until both public resolvers show the new value. Record how
+long it took.</p>
+<h3 id="45-roll-back">4.5 Roll back</h3>
+<p>Restore <code>203.0.113.10</code>. Verify the same three ways. Record how long the rollback took.</p>
+<p><strong>✅ Checkpoint 4.</strong> You now have a measured rollback time. Write it down — HW2 asks
+you to defend a TTL choice, and this number is the defence.</p>
+<blockquote>
+<p><strong>What if <code>+trace</code> shows the new value but the resolvers do not?</strong> That is the
+correct, expected intermediate state, and it is the whole lesson: the authoritative
+data changed instantly; the caches have not expired yet. Nothing is propagating.</p>
+</blockquote>
+<hr>
+<h2 id="part-5--speak-http-with-your-hands-6-min">Part 5 — Speak HTTP with your hands (6 min)</h2>
+<h3 id="51-start-the-fault-server">5.1 Start the fault server</h3>
+<p><strong>From the repository root:</strong></p>
+<pre><code class="language-bash">node weeks/week02/samples/http-faults/fault-server.mjs
+</code></pre>
+<p>The path is relative to the repo root. If you are elsewhere, <code>cd</code> there first or give an
+absolute path.</p>
+<p>Expected:</p>
+<pre><code>fault1 listening on http://127.0.0.1:8081
+fault2 listening on http://127.0.0.1:8082
+fault3 listening on http://127.0.0.1:8083
+fault3-lb listening on http://127.0.0.1:8084
+</code></pre>
+<p>Leave it running. Open a second terminal.</p>
+<h3 id="52-write-an-http-request-by-hand">5.2 Write an HTTP request by hand</h3>
+<p><strong>macOS / Linux / WSL:</strong></p>
+<pre><code class="language-bash">printf &#39;GET /healthz HTTP/1.1\r\nHost: status.campuspulse.example\r\nConnection: close\r\n\r\n&#39; \
+  | nc 127.0.0.1 8081
+</code></pre>
+<blockquote>
+<p><strong><code>Connection: close</code> matters.</strong> HTTP/1.1 keeps the socket open by default. Without
+that header, <code>nc</code> prints the response and then sits there until the server times out.</p>
+</blockquote>
+<p><strong>Windows PowerShell</strong> (no <code>nc</code> required):</p>
+<pre><code class="language-powershell">$c = [Net.Sockets.TcpClient]::new(&#39;127.0.0.1&#39;, 8081)
+$s = $c.GetStream()
+$req = &quot;GET /healthz HTTP/1.1`r`nHost: status.campuspulse.example`r`nConnection: close`r`n`r`n&quot;
+$b = [Text.Encoding]::ASCII.GetBytes($req); $s.Write($b, 0, $b.Length); $s.Flush()
+$sr = [IO.StreamReader]::new($s)
+while ($null -ne ($line = $sr.ReadLine())) { $line }
+$c.Close()
+</code></pre>
+<p><strong>Expected:</strong></p>
+<pre><code>HTTP/1.1 200 OK
+Server: campuspulse-fault-lab/1.0
+Content-Type: application/json
+Content-Length: 39
+Vary: Accept-Encoding
+
+{&quot;status&quot;:&quot;ok&quot;,&quot;service&quot;:&quot;campuspulse&quot;}
+</code></pre>
+<h3 id="53-change-one-header-value">5.3 Change one header value</h3>
+<p>Run it again with <code>Host: www.campuspulse.example</code>.</p>
+<blockquote>
+<p><strong>Windows:</strong> re-run the <strong>whole</strong> PowerShell block from <code>$c = ...</code>. The socket was
+closed by <code>$c.Close()</code>, so editing <code>$req</code> and writing again throws
+<code>Cannot access a disposed object</code>. That is not a bug — it is <code>Connection: close</code>
+doing exactly what you asked for.</p>
+</blockquote>
+<p><strong>Expected:</strong> <code>HTTP/1.1 404 Not Found</code> and <code>X-Served-By: shared-edge-7</code>.</p>
+<p>Same address. Same port. Same bytes except one header value. <strong>DNS was never
+involved.</strong></p>
+<p><strong>✅ Checkpoint 5.</strong> Write one sentence explaining why a 404 here would <em>not</em> be
+fixed by any change to a DNS record.</p>
+<hr>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="1-dig-trace-hangs-or-says-no-servers-could-be-reached">1. <code>dig +trace</code> hangs or says &quot;no servers could be reached&quot;</h3>
+<p>Two different failures wear the same message. Tell them apart by <strong>where</strong> it stops.</p>
+<p><strong>(a) It prints the root NS list, then stalls.</strong> IPv6 reachability or direct
+UDP/TCP 53 filtering are hypotheses, not diagnoses from this symptom alone.</p>
+<pre><code class="language-bash">dig -4 +trace depaul.edu A          # force IPv4 for the whole walk
+</code></pre>
+<p><strong>(b) It fails immediately, before printing anything.</strong> <code>+trace</code> starts by asking your
+<em>configured</em> resolver for the root nameserver list, and yours refused or timed out.
+Common on WSL, on VPNs, and behind captive portals. Name a starting resolver:</p>
+<pre><code class="language-bash">dig -4 @1.1.1.1 +trace depaul.edu A
+</code></pre>
+<p>If both fail, port 53 is being blocked or intercepted. Confirm the network is otherwise
+fine using DoH, which rides on 443:</p>
+<pre><code class="language-bash">curl -s -H &quot;accept: application/dns-json&quot; \
+  &quot;https://cloudflare-dns.com/dns-query?name=depaul.edu&amp;type=A&quot;
+</code></pre>
+<p>If that works and <code>dig</code> does not, direct DNS filtering is one hypothesis. Note the observation —
+it is a legitimate observation, not a failure, and it is exactly the DoH operational
+effect from Block A.</p>
+<h3 id="2-your-new-record-returns-nxdomain-from-a-resolver-but-trace-shows-it">2. Your new record returns <code>NXDOMAIN</code> from a resolver but <code>+trace</code> shows it</h3>
+<p><strong>Cause:</strong> negative caching. Something queried the name before it existed, and the
+resolver cached the <code>NXDOMAIN</code>.</p>
+<pre><code class="language-bash">dig @1.1.1.1 lab.yourdomain.example A     # read the SOA in the AUTHORITY section
+</code></pre>
+<p>The negative-cache lifetime is the <strong>lesser</strong> of that SOA record&#39;s own TTL and its
+<code>minimum</code> field — the last number in the SOA RDATA (RFC 2308 §5). Read both; take the
+smaller.</p>
+<p>Wait that many seconds. Do not &quot;fix&quot; the record — it is already correct. Record this in
+your notes; it is exactly the evidence HW2 wants for a deliberate failure.</p>
+<h3 id="3-the-ttl-does-not-decrease-between-queries-to-1111">3. The TTL does not decrease between queries to <code>1.1.1.1</code></h3>
+<p><strong>Cause:</strong> <code>1.1.1.1</code> is not one server. It is a distributed service — many sites, each
+with its own cache, and load balancing within each site. You are reaching different
+cache state, not one countdown.</p>
+<pre><code class="language-bash">for i in 1 2 3 4 5 6; do dig @1.1.1.1 depaul.edu A +noall +answer; done
+</code></pre>
+<p>Different TTLs are consistent with different cache nodes, refresh or prefetch;
+they do not uniquely prove anycast routing. On an unmanaged practice machine,
+you may inspect your own OS cache
+for a clean monotonic countdown instead:</p>
+<pre><code class="language-powershell">Clear-DnsClientCache
+Resolve-DnsName lab.yourdomain.example -Type A | Out-Null
+1..6 | ForEach-Object {
+  Get-DnsClientCache -Entry lab.yourdomain.example | Where-Object Type -eq 1 |
+    Select-Object -First 1 Entry, TimeToLive, Data
+  Start-Sleep 5
+}
+</code></pre>
+<pre><code class="language-bash"># Linux with systemd-resolved
+resolvectl flush-caches &amp;&amp; resolvectl query lab.yourdomain.example
+</code></pre>
+<h3 id="4-node-fault-servermjs-fails-with-eaddrinuse">4. <code>node fault-server.mjs</code> fails with <code>EADDRINUSE</code></h3>
+<p>Another process holds 8081–8084. Start it somewhere else:</p>
+<pre><code class="language-bash">node weeks/week02/samples/http-faults/fault-server.mjs --port 9100
+</code></pre>
+<p>Then use <code>9100</code>–<code>9103</code> in place of <code>8081</code>–<code>8084</code>.</p>
+<p>For independently allocated ports, run the same server with <code>--port 0</code>.
+Read the reported <code>PORTS</code> mapping (<code>fault1</code>, <code>fault2</code>, <code>fault3</code>, <code>proxy</code>) and
+substitute each actual port separately; do not calculate them by adding to
+the first one. This is the preferred mode for parallel automated tests.</p>
+<hr>
+<h2 id="what-to-keep-for-hw2">What to keep for HW2</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Artifact</th><th>From</th></tr></thead><tbody><tr><td><code>dig +trace</code> full delegation path</td><td>Part 1.1</td></tr><tr><td>Three-server flag comparison</td><td>Part 1.2</td></tr><tr><td>Cache-age subtraction</td><td>Part 2.2</td></tr><tr><td>TTL countdown on your own record</td><td>Part 3.4</td></tr><tr><td>Written cutover plan + before/after/rollback transcripts + timings</td><td>Part 4</td></tr><tr><td>Hand-written HTTP request and the 200/404 pair</td><td>Part 5</td></tr></tbody></table></div>
+<blockquote>
+<p><strong>Clean-up.</strong> Delete <code>lab</code> from your zone before you leave, or raise its TTL to 3600 if
+you want to keep it for the homework. Do not leave a 60-second TTL on a record you have
+stopped thinking about.</p>
+</blockquote>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

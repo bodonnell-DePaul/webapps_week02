@@ -1,0 +1,151 @@
+################################################################################
+# FAULT 2 — supplied artifact for HW2, Task 6
+#
+# Ticket A: "The homepage flashes and then the browser says the page isn't
+#            redirecting properly. Works fine in curl though."
+# Ticket B: "Our incident-reporting POST silently stopped creating incidents
+#            after we moved the endpoint. No errors in the client."
+#
+# Captured from: weeks/week02/samples/http-faults/fault-server.mjs (fault 2)
+################################################################################
+
+--- A. Follow the redirects and count them. ---
+$ curl -sSIL --max-redirs 5 \
+       --resolve campuspulse.example:8082:127.0.0.1 \
+       --resolve www.campuspulse.example:8082:127.0.0.1 \
+       http://campuspulse.example:8082/  ; echo "exit=$?"
+  curl: (47) Maximum (5) redirects followed
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  Location: http://www.campuspulse.example:8082/
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  Location: http://campuspulse.example:8082/
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  Location: http://www.campuspulse.example:8082/
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  Location: http://campuspulse.example:8082/
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  Location: http://www.campuspulse.example:8082/
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  Location: http://campuspulse.example:8082/
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+  exit=47
+
+--- B. The POST. curl default behaviour: no -X, so curl may rewrite the method. ---
+$ curl -sv -L -H "Content-Type: application/json" \
+       -d "{\"service\":\"library-wifi\",\"state\":\"degraded\"}" \
+       --resolve campuspulse.example:8082:127.0.0.1 \
+       http://campuspulse.example:8082/legacy/incidents
+  *   Trying 127.0.0.1:8082...
+  > POST /legacy/incidents HTTP/1.1
+  > Host: campuspulse.example:8082
+  > User-Agent: curl/8.5.0
+  > Accept: */*
+  > Content-Type: application/json
+  > Content-Length: 45
+  > 
+  } [45 bytes data]
+  < HTTP/1.1 302 Found
+  < Server: campuspulse-fault-lab/1.0
+  * Please rewind output before next send
+  < Location: http://campuspulse.example:8082/api/incidents
+  < Content-Length: 0
+  < Date: Sat, 15 Aug 2026 19:57:46 GMT
+  < Connection: keep-alive
+  < Keep-Alive: timeout=5
+  < 
+  * Issue another request to this URL: 'http://campuspulse.example:8082/api/incidents'
+  * Switch from POST to GET
+  > GET /api/incidents HTTP/1.1
+  > Host: campuspulse.example:8082
+  > User-Agent: curl/8.5.0
+  > Accept: */*
+  > Content-Type: application/json
+  > 
+  < HTTP/1.1 405 Method Not Allowed
+  < Server: campuspulse-fault-lab/1.0
+  < Content-Type: application/json
+  < Allow: POST
+  < Content-Length: 48
+  < Date: Sat, 15 Aug 2026 19:57:46 GMT
+  < Connection: keep-alive
+  < Keep-Alive: timeout=5
+  < 
+  { [48 bytes data]
+  {"error":"method_not_allowed","expected":"POST"}
+
+--- C. The SAME request with -X POST. Read this one carefully. ---
+$ curl -sv -L -X POST -H "Content-Type: application/json" \
+       -d "{\"service\":\"library-wifi\",\"state\":\"degraded\"}" \
+       --resolve campuspulse.example:8082:127.0.0.1 \
+       http://campuspulse.example:8082/legacy/incidents
+  *   Trying 127.0.0.1:8082...
+  > POST /legacy/incidents HTTP/1.1
+  > Host: campuspulse.example:8082
+  > User-Agent: curl/8.5.0
+  > Accept: */*
+  > Content-Type: application/json
+  > Content-Length: 45
+  > 
+  } [45 bytes data]
+  < HTTP/1.1 302 Found
+  < Server: campuspulse-fault-lab/1.0
+  * Please rewind output before next send
+  < Location: http://campuspulse.example:8082/api/incidents
+  < Content-Length: 0
+  < Date: Sat, 15 Aug 2026 19:57:46 GMT
+  < Connection: keep-alive
+  < Keep-Alive: timeout=5
+  < 
+  * Issue another request to this URL: 'http://campuspulse.example:8082/api/incidents'
+  * Switch from POST to GET
+  > POST /api/incidents HTTP/1.1
+  > Host: campuspulse.example:8082
+  > User-Agent: curl/8.5.0
+  > Accept: */*
+  > Content-Type: application/json
+  > 
+  < HTTP/1.1 201 Created
+  < Server: campuspulse-fault-lab/1.0
+  < Content-Type: application/json
+  < Content-Length: 16
+  < Date: Sat, 15 Aug 2026 19:57:46 GMT
+  < Connection: keep-alive
+  < Keep-Alive: timeout=5
+  < 
+  { [16 bytes data]
+  {"created":true}

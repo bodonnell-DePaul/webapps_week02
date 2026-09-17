@@ -1,0 +1,21 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 jvns.ca A
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 36452
+;; flags: qr rd ra; QUERY: 1, ANSWER: 1, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;jvns.ca.			IN	A
+
+;; ANSWER SECTION:
+jvns.ca.		192	IN	A	75.2.60.5
+
+;; Query time: 8 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sat Aug 15 19:49:38 UTC 2026
+;; MSG SIZE  rcvd: 52
+

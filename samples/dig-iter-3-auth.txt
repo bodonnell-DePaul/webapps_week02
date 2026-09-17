@@ -1,0 +1,34 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @ns1.depaul.edu depaul.edu A +norecurse
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 58635
+;; flags: qr aa; QUERY: 1, ANSWER: 1, AUTHORITY: 4, ADDITIONAL: 5
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 65dea4782a0889eacc8c49eb6a80c2d3c85a7d0b63786cb7 (good)
+;; QUESTION SECTION:
+;depaul.edu.			IN	A
+
+;; ANSWER SECTION:
+depaul.edu.		86400	IN	A	64.239.109.1
+
+;; AUTHORITY SECTION:
+depaul.edu.		14400	IN	NS	ns4.depaul.edu.
+depaul.edu.		14400	IN	NS	ns3.depaul.edu.
+depaul.edu.		14400	IN	NS	ns2.depaul.edu.
+depaul.edu.		14400	IN	NS	ns1.depaul.edu.
+
+;; ADDITIONAL SECTION:
+ns4.depaul.edu.		14400	IN	A	168.61.185.108
+ns3.depaul.edu.		14400	IN	A	140.192.141.178
+ns2.depaul.edu.		14400	IN	A	140.192.239.2
+ns1.depaul.edu.		14400	IN	A	140.192.0.2
+
+;; Query time: 56 msec
+;; SERVER: 140.192.0.2#53(ns1.depaul.edu) (UDP)
+;; WHEN: Sat Aug 15 19:49:39 UTC 2026
+;; MSG SIZE  rcvd: 219
+

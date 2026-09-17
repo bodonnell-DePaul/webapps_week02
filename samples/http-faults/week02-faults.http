@@ -1,0 +1,44 @@
+@base = http://127.0.0.1:8081
+@fault1 = http://127.0.0.1:8081
+@fault2 = http://127.0.0.1:8082
+@fault3 = http://127.0.0.1:8083
+@proxy = http://127.0.0.1:8084
+
+### Fault 1A — known virtual host succeeds
+GET {{fault1}}/healthz HTTP/1.1
+Host: status.campuspulse.example
+
+### Fault 1B — same socket, unknown Host fails
+GET {{fault1}}/healthz HTTP/1.1
+Host: www.campuspulse.example
+
+### Fault 2A — redirect loop at the site root
+GET {{fault2}}/ HTTP/1.1
+Host: campuspulse.example
+
+### Fault 2B — legacy POST receives a 302 redirect
+POST {{fault2}}/legacy/incidents HTTP/1.1
+Host: campuspulse.example
+Content-Type: application/json
+
+{"service":"library-wifi"}
+
+### Fault 2C — target endpoint accepts POST directly
+POST {{fault2}}/api/incidents HTTP/1.1
+Host: campuspulse.example
+Content-Type: application/json
+
+{"service":"library-wifi"}
+
+### Fault 3A — proxy path loops because the app never sees X-Forwarded-Proto
+GET {{proxy}}/healthz HTTP/1.1
+Host: campuspulse.example
+
+### Fault 3B — app direct, no forwarded protocol
+GET {{fault3}}/healthz HTTP/1.1
+Host: campuspulse.example
+
+### Fault 3C — app direct with the one header it expected
+GET {{fault3}}/healthz HTTP/1.1
+Host: campuspulse.example
+X-Forwarded-Proto: https

@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HW2 — Zone Build and HTTP Forensics - CSC 436</title>
+<link rel="stylesheet" href="../../assets/course.css">
+<link rel="icon" type="image/svg+xml" href="../../assets/course-icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header><a class="course-name" href="../../index.html">CSC 436</a>
+<nav aria-label="Course">
+<a href="../../docs/getting-started.html">Start here</a>
+<a href="../../docs/new_syllabus.html">Syllabus</a>
+<a href="../../docs/course-map.html">Course map</a>
+<a href="../../final-project/index.html">Final project</a>
+</nav></header>
+<main id="main">
+<p class="source-link"><a href="homework.md" download>Download Markdown source</a></p>
+<h1 id="hw2--zone-build-and-http-forensics">HW2 — Zone Build and HTTP Forensics</h1>
+<p><strong>Due:</strong> before Week 3 class · <strong>Points:</strong> 100 · <strong>Weight:</strong> part of the 35% homework component
+<strong>Effort:</strong> ~8–9 hours including the beginner bridge, <strong>plus</strong> an elapsed wait of at least one TTL — start on day one
+<strong>Individual:</strong> every student configures, tests, and submits their own zone. The evidence
+and the writing must be yours.</p>
+<blockquote>
+<p><strong>The point of this assignment, in one sentence.</strong> Take the domain you bought in HW1
+and make it a system you operate — configured deliberately, changed on a plan, and
+diagnosed from evidence rather than from guesses.</p>
+</blockquote>
+<hr>
+<h2 id="1-where-this-fits">1. Where this fits</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>This assignment satisfies</th><th>Which means</th></tr></thead><tbody><tr><td><strong>Milestone 2 — Architecture</strong>, the <em>zone plan</em> component</td><td>Your Task 2 zone file and Task 3 apex decision are the zone plan. Do not write them twice.</td></tr><tr><td><strong>HW4 (Week 4)</strong> prerequisite</td><td>Your CAA record decision here determines whether ACME issuance works there.</td></tr><tr><td><strong>Final Evidence Dossier</strong>, DNS section</td><td>Tasks 1–5 are submitted essentially unchanged into the dossier.</td></tr></tbody></table></div>
+<p>Everything you produce here is reused. Nothing in this assignment is throwaway.</p>
+<p>Use the <a href="reference.html">public weekly reference</a>, not private lecture/speaker
+notes. For evidence-standard parts 6–7 without a personal AI session, critique
+the <a href="../../docs/non-ai-review-artifacts.html#hw2---dns-change-plan-draft">HW2 supplied DNS change-plan draft</a>,
+cite it and connect the claim to your permitted cutover evidence.</p>
+<hr>
+<h2 id="2-prerequisites">2. Prerequisites</h2>
+<p>Before you start, confirm all five. If any fails, fix it first — the tasks depend on it.</p>
+<ol>
+<li><strong>You control a domain or assigned course subdomain</strong> (HW1 evidence).
+Registrar access is only necessary for your own registration.</li>
+<li><strong>You know who hosts your DNS</strong>, and it is the same place you are editing records.
+Confirm with <code>dig NS yourdomain.example +short</code>.</li>
+<li><strong><code>dig</code> works.</strong> <code>dig -v</code> prints a version. Installation table in <a href="lab.html"><code>lab.md</code></a>.</li>
+<li><strong><code>curl</code> works.</strong> <code>curl --version</code>.</li>
+<li><strong>Node 24 LTS</strong>, for the supplied fault server: <code>node --version</code>.</li>
+</ol>
+<blockquote>
+<p><strong>Domain trouble?</strong> The hardship path from Week 1 still applies. Contact the
+instructor privately; you will be issued a delegated subdomain of the course domain
+with record-editing rights or an authorized change workflow. No explanation is
+required and there is no grade difference. For a leaf in the shared course zone,
+document parent delegation instead of claiming an independent child zone; use
+the zone apex for NS/SOA and submit an export of only your authorized records.</p>
+</blockquote>
+<hr>
+<h2 id="3-tasks">3. Tasks</h2>
+<h3 id="task-1--trace-and-explain-the-delegation-path-10-pts">Task 1 — Trace and explain the delegation path (10 pts)</h3>
+<p>Run and capture:</p>
+<pre><code class="language-bash">dig +trace yourdomain.example A
+dig +trace www.yourdomain.example A
+</code></pre>
+<p>Then annotate the first transcript. For <strong>every</strong> group in the output — starting with the
+root-hints bootstrap and ending with the terminal authoritative answer — write one line
+naming (a) which server answered, (b) whether it gave a referral or an answer, and (c)
+how you can tell from the output. The number of groups depends on your domain; a
+<code>.co.uk</code> or a delegated subdomain has more than a <code>.com</code>.</p>
+<p><strong>Deliverable:</strong> <code>evidence/01-dig-trace.txt</code> (raw) + a section in your report with the
+annotation.</p>
+<blockquote>
+<p>If <code>+trace</code> stalls, use <code>dig -4 +trace</code> and say in your report that you did, and why.</p>
+</blockquote>
+<hr>
+<h3 id="task-2--build-and-export-your-zone-with-a-reason-for-every-line-25-pts">Task 2 — Build and export your zone, with a reason for every line (25 pts)</h3>
+<p>Configure your zone to hold <strong>at minimum</strong>:</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Record</th><th>Requirement</th></tr></thead><tbody><tr><td>An address-bearing name</td><td>Whatever your Task 3 decision requires: <code>A</code>/<code>AAAA</code> at the apex, a <code>CNAME</code> at <code>www</code>, or your host&#39;s <code>ALIAS</code>. Use what your hosting target actually needs.</td></tr><tr><td><code>AAAA</code></td><td>Or a written justification for omitting it</td></tr><tr><td><code>CNAME</code></td><td>At least one subdomain, e.g. <code>docs</code> or <code>app</code></td></tr><tr><td><code>TXT</code></td><td>The non-secret D2L ownership nonce or a real service verification string. No mail service or paid account is required.</td></tr><tr><td><code>CAA</code></td><td>Required. Name the CA you intend to use in Week 4</td></tr><tr><td><code>MX</code></td><td>Configure it, or publish <strong>Null MX</strong> (<code>MX 0 .</code>, RFC 7505) and say why</td></tr><tr><td><code>cutover</code></td><td>An <code>A</code> record at <strong>TTL 3600</strong>, value <code>203.0.113.10</code>, <strong>DNS only / unproxied</strong>. This is Task 5&#39;s disposable subject.</td></tr><tr><td><code>NS</code> / <code>SOA</code></td><td>Read what your host generated; you do not author these and are not graded on them</td></tr></tbody></table></div>
+<blockquote>
+<p><strong>If your DNS host is Cloudflare, every record you create must be &quot;DNS only&quot; (grey
+cloud), not &quot;Proxied&quot; (orange cloud).</strong> A proxied record ignores your TTL, reports
+<code>Auto</code>, and returns Cloudflare&#39;s addresses instead of yours — so your TTL evidence and
+your cutover measurements will both be measuring something you did not configure. Other
+proxying hosts behave the same way.</p>
+</blockquote>
+<blockquote>
+<p><strong><code>203.0.113.0/24</code> is TEST-NET-3 (RFC 5737): documentation-only, non-routable.</strong> Records
+pointing there will never serve traffic. That is deliberate for <code>cutover</code>, which exists
+to be changed and rolled back, not to work.</p>
+</blockquote>
+<p>Export records from your DNS host. If it has no BIND-zone export, submit the
+provider&#39;s JSON/CLI export plus your BIND-style annotated representation; for a
+course zone export only your authorized subset, not other students&#39; records.
+Sanitize any non-public account metadata before committing. Commit the <strong>raw</strong> export, then a second,
+annotated copy in which <strong>every</strong> record carries a rationale <strong>and</strong> a TTL justification
+as comments. The worked example below is the expected depth: a few lines each, not a
+single clause.</p>
+<p><strong>Worked example of the expected depth — this is the bar:</strong></p>
+<pre><code class="language-dns">; ---------------------------------------------------------------------------
+@   3600  IN  A    198.51.100.42
+;   WHY:  Apex is primary (see Task 3). Points at the address my hosting platform
+;         assigned to the CampusPulse container. Chosen over CNAME because an apex
+;         CNAME is illegal and my host does not support ALIAS. If it did, I would
+;         have used ALIAS so the platform could move me without my involvement.
+;   TTL:  3600. Steady state. The address is stable and changing it is a planned
+;         event, not an emergency. Long enough to survive a brief authoritative
+;         outage; short enough that a planned cutover only needs one hour of
+;         pre-lowering rather than a day.
+
+docs  3600  IN  CNAME  campuspulse-docs.pages.dev.
+;   WHY:  Docs are served by a platform that assigns me a hostname, not an
+;         address. A CNAME is legal here because `docs` is a subdomain, and it
+;         lets the platform re-address without touching my zone.
+;   TTL:  3600. I do not expect to repoint this. Note the effective delay on any
+;         change is governed by THIS record&#39;s TTL, not by the target&#39;s — each
+;         link in the chain is cached independently.
+
+@   3600  IN  CAA  0 issue &quot;letsencrypt.org&quot;
+;   WHY:  Restricts issuance to Let&#39;s Encrypt, which is what HW4&#39;s ACME client
+;         will use. Without this record, and with no CAA on any ancestor, there
+;         is no applicable CAA restriction and any public CA may issue for me.
+;   TTL:  3600. Changing this is rare and always deliberate. Note: if I switch
+;         CA in Week 4 I must change this FIRST or issuance will be refused.
+
+cutover  3600  IN  A  203.0.113.10
+;   WHY:  Disposable. Exists only as Task 5&#39;s cutover subject. TEST-NET-3, so it
+;         serves nothing and breaking it cannot break my site. DNS only, not
+;         proxied, so the TTL I set is the TTL that is served.
+;   TTL:  3600 deliberately, so that lowering it to 60 requires a real one-hour
+;         wait before the cutover is safe. A record already at 60 would make the
+;         planning exercise vacuous.
+; ---------------------------------------------------------------------------
+</code></pre>
+<p>A rationale should go beyond &quot;this points the website at the server.&quot; A rationale
+names the <strong>alternative you rejected</strong> and the <strong>consequence of the TTL you chose</strong>.</p>
+<blockquote>
+<p>You are not graded on the <code>NS</code> and <code>SOA</code> records your host generated. Read them,
+annotate the SOA <code>minimum</code> field with what it controls, and move on.</p>
+</blockquote>
+<p><strong>Deliverable:</strong> <code>evidence/02-zone-raw.txt</code> (the unmodified export) <strong>and</strong>
+<code>evidence/02-zone-annotated.txt</code> (your annotated copy).</p>
+<hr>
+<h3 id="task-3--decide-apex-vs-www-and-defend-it-10-pts">Task 3 — Decide apex vs <code>www</code>, and defend it (10 pts)</h3>
+<p><strong>This task is a documented decision, not an implementation.</strong> You are not required to
+build a working redirect this week — HTTPS redirects land in Week 4, when you have a
+certificate. If you have already implemented one, include <code>curl -sIL</code> evidence for extra
+credibility; if you have not, describe what you will build.</p>
+<p>Pick one:</p>
+<ul>
+<li><strong>Apex-primary</strong> — <code>yourdomain.example</code> serves the site; <code>www</code> redirects to it.</li>
+<li><strong><code>www</code>-primary</strong> — <code>www.yourdomain.example</code> serves the site; the apex redirects.</li>
+</ul>
+<p>Write <strong>150–300 words</strong> covering all four:</p>
+<ol>
+<li>Which you chose and how it is implemented in your zone (record types, literally).</li>
+<li>What your DNS host offers for the apex — <code>ALIAS</code>, <code>ANAME</code>, CNAME flattening, or
+nothing — and how that constrained you. <strong>Name the feature your host actually has</strong>;
+do not describe a generic capability.</li>
+<li>How the non-primary name redirects — the <strong>status code</strong> you chose and why. Design is
+sufficient; state whether it is built yet.</li>
+<li>One consequence of your choice you would have to live with — cookie scope, cert
+SANs, or an operational limitation.</li>
+</ol>
+<p><strong>Deliverable:</strong> a section in your report. Include <code>dig</code> output for <strong>both</strong> names, even
+if one of them returns NODATA — say so and explain why that is the expected result for
+your design.</p>
+<hr>
+<h3 id="task-4--prove-resolution-from-two-independent-resolvers-10-pts">Task 4 — Prove resolution from two independent resolvers (10 pts)</h3>
+<p>Query <strong>at least two</strong> resolvers you do not control, plus the authoritative source. Use
+<strong>the name that actually carries your <code>A</code> record</strong> — the one you chose in Task 3. If you
+went <code>www</code>-primary, that is <code>www.yourdomain.example</code>, not the apex.</p>
+<pre><code class="language-bash">dig @1.1.1.1 &lt;your-A-record-name&gt; A
+dig @8.8.8.8 &lt;your-A-record-name&gt; A
+dig @9.9.9.9 &lt;your-A-record-name&gt; A          # a third is free evidence
+dig @&lt;your-authoritative-ns&gt; &lt;your-A-record-name&gt; A +norecurse
+</code></pre>
+<blockquote>
+<p>Querying a name with no <code>A</code> record returns <code>NOERROR</code> with <code>ANSWER: 0</code> — NODATA — and
+there is no TTL to do arithmetic on. That is a correct result for the wrong question.</p>
+</blockquote>
+<p>In your report, state for each: the <strong>flags</strong>, the <strong>TTL</strong>, and — for the authoritative
+one — the fact that <code>aa</code> is set. Then compute the <strong>apparent cache age</strong> for one resolver:</p>
+<pre><code>authoritative TTL (measured at the same time) − resolver-reported TTL
+    = seconds since that resolver&#39;s cache last refreshed
+</code></pre>
+<p>Show the arithmetic. <strong>Measure the authoritative TTL yourself in the same session</strong> —
+do not assume the value you configured is the value being served, because a proxying host
+may override it.</p>
+<blockquote>
+<p>Call the result an <em>apparent</em> cache age. A resolver may cap long TTLs to its own
+ceiling, prefetch just before expiry, or serve stale on failure, so the subtraction is
+a very good estimate rather than a guarantee.</p>
+<p>If your primary name is a <code>CNAME</code>, say <strong>which RRset</strong> you did the arithmetic on. The
+<code>CNAME</code> and the <code>A</code> it points to are cached independently and usually have different
+TTLs.</p>
+</blockquote>
+<p><strong>Deliverable:</strong> <code>evidence/04-resolvers.txt</code> + the analysis.</p>
+<blockquote>
+<p>Your laptop is one useful observation, not evidence that all clients see the
+same answer. Compare it with authoritative and independent resolver evidence.</p>
+</blockquote>
+<hr>
+<h3 id="task-5--plan-and-execute-a-cutover-then-roll-it-back-20-pts">Task 5 — Plan and execute a cutover, then roll it back (20 pts)</h3>
+<p>This is the largest single block of marks and the part a model cannot do for you.</p>
+<blockquote>
+<p><strong>Use the <code>cutover</code> record from Task 2</strong> — the disposable <code>A</code> record at TTL 3600
+pointing at TEST-NET-3, DNS only. Do <strong>not</strong> run this exercise against a record your
+site depends on, and do <strong>not</strong> use a record already at TTL 60: with no waiting period
+the planning arithmetic is vacuous and the task loses its marks.</p>
+</blockquote>
+<h4 id="5a-the-plan-written-before-you-change-anything">5a. The plan, written <strong>before</strong> you change anything</h4>
+<pre><code class="language-text">CUTOVER PLAN
+  Record            : cutover.yourdomain.example (A)
+  Current value     : 203.0.113.10   &lt;- the rollback target — write it down FIRST
+  New value         : 198.51.100.77
+  Current TTL       : 3600
+  TTL lowered to    : 60 at &lt;timestamp&gt;
+  Earliest safe cut : &lt;lowered-at + 3600 s&gt;   &lt;- and say why
+  Change at         : &lt;timestamp&gt;
+  Verification      : dig @1.1.1.1 ..., dig @8.8.8.8 ..., dig +trace ...
+  Success criteria  : both selected resolvers return 198.51.100.77
+  Rollback trigger  : the AUTHORITATIVE answer is wrong, or the service behind it
+                      fails health checks. NOT &quot;a resolver is still stale&quot; —
+                      expected cache lag is not evidence that the cutover failed.
+  Rollback action   : restore 203.0.113.10; expected live within 60 s
+  Rollback owner    : &lt;who decides&gt;
+</code></pre>
+<p>The <code>Earliest safe cut</code> line is graded. If it is not at least the <strong>old</strong> TTL after the
+lowering, you have not understood the mechanism and the task loses points regardless of
+how clean the transcripts are.</p>
+<h4 id="5b-execute-it">5b. Execute it</h4>
+<p>Capture, with timestamps, in this order:</p>
+<ol>
+<li>Before-state from both resolvers.</li>
+<li>The TTL lowering — a screenshot (<code>evidence/05-ttl-lowered.png</code>) or a provider API
+call/audit-log entry — and the wall-clock time.</li>
+<li>The record change, and the wall-clock time.</li>
+<li>Verification queries, repeated, until both <strong>selected</strong> resolvers show the new value.</li>
+<li><strong>The elapsed time from change to visibility at those two resolvers.</strong></li>
+</ol>
+<blockquote>
+<p>&quot;Visible at the two resolvers you chose&quot; is not the same as &quot;visible everywhere.&quot;
+Two anycast services are a sample, not a census. Say so in your write-up.</p>
+</blockquote>
+<h4 id="5c-roll-back">5c. Roll back</h4>
+<p>Restore the original value. Capture verification the same way and record the elapsed
+rollback time.</p>
+<h4 id="5d-reflect">5d. Reflect</h4>
+<p>Two to four sentences: was your TTL choice right? If you had to do this cutover under
+incident pressure at 2 a.m., what would you change about the plan?</p>
+<p><strong>Deliverable:</strong> <code>evidence/05-cutover.txt</code> (all transcripts, timestamped) + plan and
+reflection in the report.</p>
+<hr>
+<h3 id="task-6--diagnose-three-supplied-http-failures-20-pts">Task 6 — Diagnose three supplied HTTP failures (20 pts)</h3>
+<p>Three broken behaviours are supplied in <code>weeks/week02/samples/http-faults/</code>. Each is a
+real, runnable fault, not a description of one.</p>
+<pre><code class="language-bash">node weeks/week02/samples/http-faults/fault-server.mjs
+</code></pre>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Fault</th><th>Artifact</th><th>The reported symptom</th></tr></thead><tbody><tr><td>1</td><td><code>fault-1-host-header.txt</code></td><td>&quot;<code>www</code> 404s but DNS is right. Not propagated yet?&quot;</td></tr><tr><td><strong>2A</strong></td><td><code>fault-2-redirect-chain.txt</code> part A</td><td>&quot;Homepage redirect loop&quot;</td></tr><tr><td><strong>2B</strong></td><td><code>fault-2-redirect-chain.txt</code> parts B &amp; C</td><td>&quot;Our POST silently stopped creating things&quot;</td></tr><tr><td>3</td><td><code>fault-3-x-forwarded-proto.txt</code></td><td>&quot;Redirects forever, but only in production&quot;</td></tr></tbody></table></div>
+<p><strong>Fault 2 contains two independent defects.</strong> Treat 2A and 2B as separate faults and
+produce all four outputs below for each. That is four faults&#39; worth of write-up in total.</p>
+<p>For <strong>each</strong> fault, produce all four:</p>
+<ol>
+<li><strong>The annotated request/response pair</strong> — the specific lines that carry the
+evidence, with your annotation on each.</li>
+<li><strong>The diagnosis</strong> — one or two sentences naming the actual cause.</li>
+<li><strong>The confirming command</strong> — the single command that would distinguish your
+diagnosis from the next most plausible one, and what result would confirm it.</li>
+<li><strong>The fix</strong> — what you would change, and where (app, proxy, or DNS).</li>
+</ol>
+<p>You must also <strong>reproduce at least one of the three yourself</strong> by running the fault
+server and capturing your own transcript. Say which one and include your capture.</p>
+<p><strong>Deliverable:</strong> <code>evidence/06-http-faults.txt</code>, containing <strong>all three</strong> transcripts —
+your own capture for the one you reproduced, and the supplied transcripts for the other
+two, so everything is in one file. The four-part write-up per fault goes in your report.</p>
+<blockquote>
+<p><strong>Fault 2B contains a trap that will catch you if you are careless.</strong> Two of the
+supplied captures are the same request with one flag different, and they produce
+opposite conclusions. If your diagnosis does not mention it, you missed it.</p>
+</blockquote>
+<p><strong>Deliverable:</strong> <code>evidence/06-http-faults.txt</code> + the four-part write-up per fault.</p>
+<hr>
+<h3 id="task-7--the-evidence-standard-5-pts">Task 7 — The evidence standard (5 pts)</h3>
+<p>Every submission in this course carries the same eight parts. Items 5–8 are the ones
+students lose marks on.</p>
+<ol>
+<li><strong>Commit SHA or release tag</strong> for the repo state you submitted.</li>
+<li><strong>Reproduction commands</strong> and your exported zone.</li>
+<li><strong>Raw sanitized evidence</strong> — the <code>evidence/</code> files above.</li>
+<li><strong>Annotated interpretation</strong> in your own words — the report.</li>
+<li><strong>At least one deliberate failure and its diagnosis.</strong> Suggested, and genuinely
+instructive: query a name <em>before</em> you create it, observe the cached <code>NXDOMAIN</code>,
+read the SOA returned in the negative response&#39;s AUTHORITY section, and predict when
+it will clear. The negative-cache lifetime is the <strong>lesser</strong> of that SOA record&#39;s own
+TTL and its <code>minimum</code> field (RFC 2308 §5). Then verify your prediction.</li>
+<li><strong>AI-use log</strong> — what you generated, accepted, rejected, and how you verified it.</li>
+<li><strong>One challenged AI claim</strong>, with the evidence that rejected it.</li>
+<li><strong>Redaction attestation</strong> — no live secrets, tokens, cookies, session identifiers,
+or API keys. Replace values; keep their shape.</li>
+</ol>
+<blockquote>
+<p><strong>Redaction, specifically for this assignment.</strong> DNS output is generally safe.
+Two things are not: your DNS host&#39;s <strong>API token</strong> (never paste one) and any
+<code>Set-Cookie</code> value you capture from a real site. Replace the cookie value with
+<code>REDACTED</code> and keep the attributes — the attributes are the evidence.</p>
+</blockquote>
+<hr>
+<h2 id="4-rubric">4. Rubric</h2>
+<p>Within each row, assess 60% domain correctness and 40% reproducible evidence,
+as specified in the syllabus. Do not penalize one defect again in a matching
+gate&#39;s evidence dossier.</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>#</th><th>Criterion</th><th style="text-align:right">Pts</th></tr></thead><tbody><tr><td>1</td><td>Delegation trace captured and correctly annotated at every group</td><td style="text-align:right">10</td></tr><tr><td>2</td><td>Zone exported raw <strong>and</strong> annotated; every record has a rationale <strong>and</strong> a TTL justification</td><td style="text-align:right">25</td></tr><tr><td>3</td><td>Apex vs <code>www</code> decision defended against the host&#39;s actual capabilities</td><td style="text-align:right">10</td></tr><tr><td>4</td><td>Resolution proven from ≥2 independent resolvers + authoritative, with cache-age arithmetic</td><td style="text-align:right">10</td></tr><tr><td>5</td><td>Cutover planned before execution, executed with timestamps, rolled back, reflected on</td><td style="text-align:right">20</td></tr><tr><td>6</td><td>Four faults (1, 2A, 2B, 3) each diagnosed with evidence, a confirming command, and a fix</td><td style="text-align:right">20</td></tr><tr><td>7</td><td>Eight-part evidence standard complete, including the deliberate failure</td><td style="text-align:right">5</td></tr><tr><td></td><td><strong>Total</strong></td><td style="text-align:right"><strong>100</strong></td></tr></tbody></table></div>
+<p><strong>Rubric detail for Task 2</strong> (the largest single item):</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Level</th><th>Looks like</th></tr></thead><tbody><tr><td>22–25</td><td>Every record justified against a rejected alternative; every TTL tied to a stated change window or risk posture</td></tr><tr><td>16–21</td><td>Rationales present and correct but generic; TTLs stated without reasoning</td></tr><tr><td>8–15</td><td>Zone exported, annotations thin or partly absent</td></tr><tr><td>0–7</td><td>Zone not exported, or annotations are restatements (&quot;this is the A record for the site&quot;)</td></tr></tbody></table></div>
+<hr>
+<h2 id="5-time-estimate">5. Time estimate</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>Task</th><th style="text-align:right">Active time</th></tr></thead><tbody><tr><td>1 — Delegation trace</td><td style="text-align:right">25 min</td></tr><tr><td>2 — Zone build + annotation</td><td style="text-align:right">120 min</td></tr><tr><td>3 — Apex decision (design only)</td><td style="text-align:right">30 min</td></tr><tr><td>4 — Two-resolver proof</td><td style="text-align:right">25 min</td></tr><tr><td>5 — Cutover <em>(active work only)</em></td><td style="text-align:right">45 min</td></tr><tr><td>6 — Four faults (1, 2A, 2B, 3)</td><td style="text-align:right">105 min</td></tr><tr><td>7 — Evidence assembly + AI log</td><td style="text-align:right">50 min</td></tr><tr><td>Foundations steps 4–6, reusing the worked application</td><td style="text-align:right">60–90 min</td></tr><tr><td><strong>Total active work, including recovery margin</strong></td><td style="text-align:right"><strong>~8–9 hours</strong></td></tr></tbody></table></div>
+<blockquote>
+<p><strong>Plus one mandatory wall-clock wait you cannot compress.</strong> Task 5 requires lowering
+the TTL and then waiting <strong>at least the old TTL</strong> before cutting over. If the record&#39;s
+TTL is 3600 that is one hour; if it is 86400 that is a full day. The waiting is not
+work, but it is on the calendar, and it is the reason this assignment cannot be done
+in one sitting.</p>
+<p><strong>Do Task 5&#39;s TTL lowering on day one</strong>, then do Tasks 1, 3, 4, and 6 while the clock
+runs. Every quarter somebody starts on the last night and cannot honestly complete it.
+A cutover plan whose <code>Earliest safe cut</code> is before its <code>TTL lowered to</code> timestamp is
+self-evidently fabricated, and the timestamps are in the submission.</p>
+</blockquote>
+<hr>
+<h2 id="6-submission-format">6. Submission format</h2>
+<p>Push to your repository and submit the commit SHA in D2L.</p>
+<pre><code>hw2/
+├── README.md                     &lt;- your report; all written sections
+├── evidence/
+│   ├── 01-dig-trace.txt
+│   ├── 02-zone-raw.txt           &lt;- unmodified export from your DNS host
+│   ├── 02-zone-annotated.txt     &lt;- your rationale + TTL justification per record
+│   ├── 04-resolvers.txt
+│   ├── 05-cutover.txt
+│   ├── 05-ttl-lowered.png        &lt;- or an API/audit-log artifact
+│   └── 06-http-faults.txt        &lt;- all four faults: 1, 2A, 2B, 3
+└── ai-use-log.md                 &lt;- items 6 and 7 of the evidence standard
+</code></pre>
+<ul>
+<li>Plain text for transcripts. <strong>Not</strong> screenshots — a screenshot of a terminal is not
+greppable and cannot be verified.</li>
+<li>Timestamps in every cutover transcript. <code>date -u</code> before each command is fine.</li>
+<li><code>README.md</code> must link to each evidence file at the point it is discussed.</li>
+</ul>
+<hr>
+<h2 id="7-what-good-looks-like-vs-what-will-lose-points">7. What good looks like vs. what will lose points</h2>
+<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable table"><table><thead><tr><th>✅ What good looks like</th><th>❌ What will lose points</th></tr></thead><tbody><tr><td>&quot;TTL 60 on <code>status</code> because I expect to repoint it in Week 5; I will raise it to 3600 on 2026-10-12.&quot;</td><td>&quot;TTL 60 for faster updates.&quot;</td></tr><tr><td>&quot;Both 1.1.1.1 and 8.8.8.8 returned the new value 74 s after the change; <code>+trace</code> showed it immediately, which confirms the delay was caching, not the zone.&quot;</td><td>&quot;The change propagated after a few minutes.&quot;</td></tr><tr><td>&quot;I chose <code>www</code>-primary because my registrar&#39;s DNS has no ALIAS support, so an apex A record would hard-code an address the platform may change.&quot;</td><td>&quot;I chose www because it&#39;s standard.&quot;</td></tr><tr><td>&quot;<code>x-app-saw-xfp: (absent)</code> while <code>x-app-saw-forwarded-headers</code> lists <code>x-forwarded-protocol</code> — the proxy is sending a header the app does not read.&quot;</td><td>&quot;The X-Forwarded-Proto header was wrong.&quot;</td></tr><tr><td>A deliberate failure you caused, diagnosed, and predicted the recovery time for.</td><td>&quot;Everything worked on the first try.&quot;</td></tr><tr><td>Timestamps on every cutover step.</td><td>A cutover section with no clock in it.</td></tr></tbody></table></div>
+<hr>
+<h2 id="8-the-non-generatable-component">8. The non-generatable component</h2>
+<p>An AI can write you a zone file in four seconds. It cannot do any of this:</p>
+<ul>
+<li><strong>It cannot log in to your registrar.</strong> Delegation is an account you control.</li>
+<li><strong>It cannot know your change window.</strong> The TTL encodes <em>your</em> tolerance for being
+wrong, and only you know what that is.</li>
+<li><strong>It cannot watch a cache expire.</strong> Task 5&#39;s elapsed times are measurements of a
+live distributed system, taken by you, at a time it cannot observe.</li>
+<li><strong>It cannot roll back.</strong> Restoring a value you failed to write down first is not
+something any model can rescue you from — which is why the plan is graded before the
+execution.</li>
+<li><strong>It cannot tell you which of the two Fault 2 captures is lying.</strong> Both are real
+transcripts of the same server. Deciding which one reproduces the user&#39;s problem is
+a judgement about <em>methodology</em>, and it is the single most transferable skill in
+this assignment.</li>
+</ul>
+<p>If you use a model for this — and you should — the honest split is: let it draft your
+rationale prose, then check every technical claim against your own <code>dig</code> output. Log
+the corrections. That log is worth marks.</p>
+
+</main>
+<footer>Individual coursework. D2L contains dated deadlines, submissions and private course access.</footer>
+</body>
+</html>

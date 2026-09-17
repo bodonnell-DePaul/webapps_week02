@@ -1,0 +1,30 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @a.edu-servers.net depaul.edu A +norecurse
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 46795
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 4, ADDITIONAL: 5
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;depaul.edu.			IN	A
+
+;; AUTHORITY SECTION:
+depaul.edu.		172800	IN	NS	ns2.depaul.edu.
+depaul.edu.		172800	IN	NS	ns1.depaul.edu.
+depaul.edu.		172800	IN	NS	ns4.depaul.edu.
+depaul.edu.		172800	IN	NS	ns3.depaul.edu.
+
+;; ADDITIONAL SECTION:
+ns2.depaul.edu.		172800	IN	A	140.192.239.2
+ns1.depaul.edu.		172800	IN	A	140.192.0.2
+ns4.depaul.edu.		172800	IN	A	168.61.185.108
+ns3.depaul.edu.		172800	IN	A	140.192.141.178
+
+;; Query time: 12 msec
+;; SERVER: 192.5.6.30#53(a.edu-servers.net) (UDP)
+;; WHEN: Sat Aug 15 19:49:39 UTC 2026
+;; MSG SIZE  rcvd: 175
+

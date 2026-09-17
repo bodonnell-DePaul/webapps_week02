@@ -1,0 +1,3 @@
+$ curl -s -H "accept: application/dns-json" \
+    "https://cloudflare-dns.com/dns-query?name=depaul.edu&type=A"
+{"Status":0,"TC":false,"RD":true,"RA":true,"AD":false,"CD":false,"Question":[{"name":"depaul.edu","type":1}],"Answer":[{"name":"depaul.edu","type":1,"TTL":86400,"data":"64.239.109.1"}]}

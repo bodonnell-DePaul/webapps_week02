@@ -1,0 +1,42 @@
+;; Truncated, retrying in TCP mode.
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 depaul.edu TXT
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 43116
+;; flags: qr rd ra; QUERY: 1, ANSWER: 21, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;depaul.edu.			IN	TXT
+
+;; ANSWER SECTION:
+depaul.edu.		86400	IN	TXT	"00432575"
+depaul.edu.		86400	IN	TXT	"formstack-domain-verification=df5ee21922945b43504e870d083cb619"
+depaul.edu.		86400	IN	TXT	"sitecore-domain-verification=f26552bc913449ab8d4cce62a0327360"
+depaul.edu.		86400	IN	TXT	"smartsheet-site-validation- cKiBo/13z/uR403bulq/Q8y5l1MDoJp58twQ+YzPtbI=="
+depaul.edu.		86400	IN	TXT	"9CC7EF241805EB476A28A1044F884524"
+depaul.edu.		86400	IN	TXT	"pardot_108062_*=ab71f7137b229ea4b1d9c6264593d7946484d9e24b2b03a3beab666406d81967"
+depaul.edu.		86400	IN	TXT	"atlassian-domain-verification=tl5FjTuHJSvXnSIqkAD2/1ahiDganOEAwSu7AsaDi4Cg3LoBgypHhOuSlFdPXa0m"
+depaul.edu.		86400	IN	TXT	"apple-domain-verification=fJm7Ug5BsVd0I7Fi"
+depaul.edu.		86400	IN	TXT	"8C789095CCDCBA9291445DCC47BF68EF"
+depaul.edu.		86400	IN	TXT	"d365mktkey=78j6ucxmbwnam324kqwct83gn"
+depaul.edu.		86400	IN	TXT	"google-site-verification=GgecFA3L0pqdJgXIoUiQFXFE9Hwses_IqoKNOjBMcQo"
+depaul.edu.		86400	IN	TXT	"adobe-idp-site-verification=8a6f84b0-d1ab-4c81-b86e-824c9dd7bbad"
+depaul.edu.		86400	IN	TXT	"ZOOM_verify_e622Dwe-Qi-ZMEJfMH3t1w"
+depaul.edu.		86400	IN	TXT	"d365mktkey=6g5mnyf39l9h7hbqtqcabewb8"
+depaul.edu.		86400	IN	TXT	"apple-domain-verification=DWFSSXFvnBuV7Pi7"
+depaul.edu.		86400	IN	TXT	"jamf-site-verification=VSmnK0pev7QRYBYk1BI7tA"
+depaul.edu.		86400	IN	TXT	"FFC6CEA7B027B2DB5D3A66000DDA89BC"
+depaul.edu.		86400	IN	TXT	"v=spf1 include:spf.protection.outlook.com include:_spf.google.com include:us04._spf.brightspace.com include:_spf.explore-blue.com include:_spf.salesforce.com " "ip4:140.192.0.0/16 ip4:216.220.176.0/20 ip4:176.31.145.254 ip4:74.122.104.0/22 ip4:52.86.188.131 ip4:52.43.50.148 ip6:2620:0:2250::/48 ip6:2604:95C0::/32 ~all"
+depaul.edu.		86400	IN	TXT	"autodesk-domain-verification=-bu6ydZH05rrmvK5L1BO"
+depaul.edu.		86400	IN	TXT	"C1CBD67682F46F4B39597DD7047492AA"
+depaul.edu.		86400	IN	TXT	"94pJDr9pjApZzPZC8eS7VSv0OsI9Eqm5kB0SHQznGxPFEJTVydPKk0uDlFB67dmmwiQjFeoljoIIgddxTvsNxg=="
+
+;; Query time: 8 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (TCP)
+;; WHEN: Sat Aug 15 19:49:38 UTC 2026
+;; MSG SIZE  rcvd: 1639
+

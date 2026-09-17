@@ -1,0 +1,95 @@
+################################################################################
+# FAULT 3 — supplied artifact for HW2, Task 6
+#
+# Ticket: "Staging is fine. Production redirects forever. Nothing changed in the
+#          app. We only put the load balancer in front of it."
+#
+# Captured from: weeks/week02/samples/http-faults/fault-server.mjs (fault 3)
+#   :8084 is the TLS-terminating load balancer.  :8083 is the app behind it.
+################################################################################
+
+--- A. Through the load balancer, exactly as a browser arrives. ---
+$ curl -sSIL --max-redirs 4 \
+       --resolve status.campuspulse.example:8084:127.0.0.1 \
+       http://status.campuspulse.example:8084/healthz  ; echo "exit=$?"
+  curl: (47) Maximum (4) redirects followed
+  HTTP/1.1 301 Moved Permanently
+  server: campuspulse-fault-lab/1.0
+  x-app-saw-xfp: (absent)
+  x-app-saw-forwarded-headers: x-forwarded-protocol, x-forwarded-for, x-forwarded-host
+  location: http://status.campuspulse.example:8084/healthz
+  content-length: 0
+  date: Sat, 15 Aug 2026 19:57:46 GMT
+  connection: close
+  x-proxy: campuspulse-lb/1.0 (terminates TLS)
+  
+  HTTP/1.1 301 Moved Permanently
+  server: campuspulse-fault-lab/1.0
+  x-app-saw-xfp: (absent)
+  x-app-saw-forwarded-headers: x-forwarded-protocol, x-forwarded-for, x-forwarded-host
+  location: http://status.campuspulse.example:8084/healthz
+  content-length: 0
+  date: Sat, 15 Aug 2026 19:57:46 GMT
+  connection: close
+  x-proxy: campuspulse-lb/1.0 (terminates TLS)
+  
+  HTTP/1.1 301 Moved Permanently
+  server: campuspulse-fault-lab/1.0
+  x-app-saw-xfp: (absent)
+  x-app-saw-forwarded-headers: x-forwarded-protocol, x-forwarded-for, x-forwarded-host
+  location: http://status.campuspulse.example:8084/healthz
+  content-length: 0
+  date: Sat, 15 Aug 2026 19:57:46 GMT
+  connection: close
+  x-proxy: campuspulse-lb/1.0 (terminates TLS)
+  
+  HTTP/1.1 301 Moved Permanently
+  server: campuspulse-fault-lab/1.0
+  x-app-saw-xfp: (absent)
+  x-app-saw-forwarded-headers: x-forwarded-protocol, x-forwarded-for, x-forwarded-host
+  location: http://status.campuspulse.example:8084/healthz
+  content-length: 0
+  date: Sat, 15 Aug 2026 19:57:46 GMT
+  connection: close
+  x-proxy: campuspulse-lb/1.0 (terminates TLS)
+  
+  HTTP/1.1 301 Moved Permanently
+  server: campuspulse-fault-lab/1.0
+  x-app-saw-xfp: (absent)
+  x-app-saw-forwarded-headers: x-forwarded-protocol, x-forwarded-for, x-forwarded-host
+  location: http://status.campuspulse.example:8084/healthz
+  content-length: 0
+  date: Sat, 15 Aug 2026 19:57:46 GMT
+  connection: close
+  x-proxy: campuspulse-lb/1.0 (terminates TLS)
+  
+  exit=47
+
+--- B. Bypass the load balancer. Talk to the app directly. ---
+$ curl -sI --resolve status.campuspulse.example:8083:127.0.0.1 \
+       http://status.campuspulse.example:8083/healthz
+  HTTP/1.1 301 Moved Permanently
+  Server: campuspulse-fault-lab/1.0
+  X-App-Saw-XFP: (absent)
+  X-App-Saw-Forwarded-Headers: (none)
+  Location: https://status.campuspulse.example:8083/healthz
+  Content-Length: 0
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  
+
+--- C. Same request to the app, one header added by hand. ---
+$ curl -sI -H "X-Forwarded-Proto: https" \
+       --resolve status.campuspulse.example:8083:127.0.0.1 \
+       http://status.campuspulse.example:8083/healthz
+  HTTP/1.1 200 OK
+  Server: campuspulse-fault-lab/1.0
+  X-App-Saw-XFP: https
+  X-App-Saw-Forwarded-Headers: x-forwarded-proto
+  Content-Type: application/json
+  Content-Length: 29
+  Date: Sat, 15 Aug 2026 19:57:46 GMT
+  Connection: keep-alive
+  Keep-Alive: timeout=5
+  

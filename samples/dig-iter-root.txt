@@ -1,0 +1,61 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> @a.root-servers.net depaul.edu A +norecurse
+; (2 servers found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 56760
+;; flags: qr; QUERY: 1, ANSWER: 0, AUTHORITY: 13, ADDITIONAL: 27
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 4096
+;; QUESTION SECTION:
+;depaul.edu.			IN	A
+
+;; AUTHORITY SECTION:
+edu.			172800	IN	NS	d.edu-servers.net.
+edu.			172800	IN	NS	b.edu-servers.net.
+edu.			172800	IN	NS	f.edu-servers.net.
+edu.			172800	IN	NS	h.edu-servers.net.
+edu.			172800	IN	NS	l.edu-servers.net.
+edu.			172800	IN	NS	j.edu-servers.net.
+edu.			172800	IN	NS	e.edu-servers.net.
+edu.			172800	IN	NS	c.edu-servers.net.
+edu.			172800	IN	NS	a.edu-servers.net.
+edu.			172800	IN	NS	g.edu-servers.net.
+edu.			172800	IN	NS	i.edu-servers.net.
+edu.			172800	IN	NS	m.edu-servers.net.
+edu.			172800	IN	NS	k.edu-servers.net.
+
+;; ADDITIONAL SECTION:
+d.edu-servers.net.	172800	IN	A	192.31.80.30
+d.edu-servers.net.	172800	IN	AAAA	2001:500:856e::30
+b.edu-servers.net.	172800	IN	A	192.33.14.30
+b.edu-servers.net.	172800	IN	AAAA	2001:503:231d::2:30
+f.edu-servers.net.	172800	IN	A	192.35.51.30
+f.edu-servers.net.	172800	IN	AAAA	2001:503:d414::30
+h.edu-servers.net.	172800	IN	A	192.54.112.30
+h.edu-servers.net.	172800	IN	AAAA	2001:502:8cc::30
+l.edu-servers.net.	172800	IN	A	192.41.162.30
+l.edu-servers.net.	172800	IN	AAAA	2001:500:d937::30
+j.edu-servers.net.	172800	IN	A	192.48.79.30
+j.edu-servers.net.	172800	IN	AAAA	2001:502:7094::30
+e.edu-servers.net.	172800	IN	A	192.12.94.30
+e.edu-servers.net.	172800	IN	AAAA	2001:502:1ca1::30
+c.edu-servers.net.	172800	IN	A	192.26.92.30
+c.edu-servers.net.	172800	IN	AAAA	2001:503:83eb::30
+a.edu-servers.net.	172800	IN	A	192.5.6.30
+a.edu-servers.net.	172800	IN	AAAA	2001:503:a83e::2:30
+g.edu-servers.net.	172800	IN	A	192.42.93.30
+g.edu-servers.net.	172800	IN	AAAA	2001:503:eea3::30
+i.edu-servers.net.	172800	IN	A	192.43.172.30
+i.edu-servers.net.	172800	IN	AAAA	2001:503:39c1::30
+m.edu-servers.net.	172800	IN	A	192.55.83.30
+m.edu-servers.net.	172800	IN	AAAA	2001:501:b1f9::30
+k.edu-servers.net.	172800	IN	A	192.52.178.30
+k.edu-servers.net.	172800	IN	AAAA	2001:503:d2d::30
+
+;; Query time: 12 msec
+;; SERVER: 198.41.0.4#53(a.root-servers.net) (UDP)
+;; WHEN: Sat Aug 15 19:47:58 UTC 2026
+;; MSG SIZE  rcvd: 834
+

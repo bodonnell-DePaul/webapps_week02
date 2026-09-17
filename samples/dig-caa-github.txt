@@ -1,0 +1,27 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 github.com CAA
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 12659
+;; flags: qr rd ra; QUERY: 1, ANSWER: 7, AUTHORITY: 0, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;github.com.			IN	CAA
+
+;; ANSWER SECTION:
+github.com.		3600	IN	CAA	0 issue "digicert.com"
+github.com.		3600	IN	CAA	0 issue "globalsign.com"
+github.com.		3600	IN	CAA	0 issue "letsencrypt.org"
+github.com.		3600	IN	CAA	0 issue "sectigo.com"
+github.com.		3600	IN	CAA	0 issuewild "digicert.com"
+github.com.		3600	IN	CAA	0 issuewild "letsencrypt.org"
+github.com.		3600	IN	CAA	0 issuewild "sectigo.com"
+
+;; Query time: 12 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sat Aug 15 19:49:38 UTC 2026
+;; MSG SIZE  rcvd: 274
+

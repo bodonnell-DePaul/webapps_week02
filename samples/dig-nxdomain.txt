@@ -1,0 +1,21 @@
+
+; <<>> DiG 9.18.39-0ubuntu0.24.04.5-Ubuntu <<>> -4 @1.1.1.1 nonexistent-week2-demo.depaul.edu A
+; (1 server found)
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXDOMAIN, id: 61390
+;; flags: qr rd ra; QUERY: 1, ANSWER: 0, AUTHORITY: 1, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+;; QUESTION SECTION:
+;nonexistent-week2-demo.depaul.edu. IN	A
+
+;; AUTHORITY SECTION:
+depaul.edu.		900	IN	SOA	ns1.depaul.edu. networks.depaul.edu. 3 14400 1800 1209600 900
+
+;; Query time: 120 msec
+;; SERVER: 1.1.1.1#53(1.1.1.1) (UDP)
+;; WHEN: Sat Aug 15 19:49:38 UTC 2026
+;; MSG SIZE  rcvd: 111
+
