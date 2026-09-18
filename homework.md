@@ -265,26 +265,7 @@ evidence dossier.
 
 ---
 
-## 5. Time estimate
-
-| Task | Active time |
-| --- | ---: |
-| 1 — Public delegation trace | 35 min |
-| 2 — Record-type reading | 45 min |
-| 3 — Resolver comparison and cache-age arithmetic | 45 min |
-| 4 — Written cutover plan | 60 min |
-| 5 — HTTP fault diagnosis with `.http` files | 120 min |
-| 6 — Evidence assembly + AI log | 60 min |
-| Foundations steps 4–6, reusing the worked application | 60–90 min |
-| **Total active work, including recovery margin** | **~6–8 hours** |
-
-There is **no mandatory wall-clock DNS wait** in this revised version. You are studying
-TTL and cutover behavior from public DNS evidence and a written operator scenario, not
-executing a live zone change.
-
----
-
-## 6. Submission format
+## 5. Submission format
 
 Push to your repository and submit the commit SHA in D2L.
 
@@ -307,7 +288,7 @@ hw2/
 
 ---
 
-## 7. What good looks like vs. what will lose points
+## 6. What good looks like vs. what will lose points
 
 | ✅ What good looks like | ❌ What will lose points |
 | --- | --- |
@@ -320,7 +301,7 @@ hw2/
 
 ---
 
-## 8. The non-generatable component
+## 7. The non-generatable component
 
 An AI can describe DNS and HTTP in four seconds. It cannot do any of this honestly for
 you:
