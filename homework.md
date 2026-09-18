@@ -15,22 +15,19 @@
 | This assignment satisfies | Which means |
 | --- | --- |
 | **Milestone 2 — Architecture**, the *DNS and HTTP evidence* component | Your Task 1–4 DNS analysis and Task 5 HTTP diagnosis are reused in the milestone. |
-| **HW4 (Week 4)** prerequisite | Your CAA and redirect-method analysis prepares you for ACME and HTTPS redirect work. |
+| **HW4 (Week 4) prerequisite** | Your CAA and redirect-method analysis prepares you for ACME and HTTPS redirect work. |
 | **Final Evidence Dossier**, DNS/HTTP section | Your raw transcripts and interpretations can be submitted essentially unchanged. |
 
 Everything you produce here is reused. Nothing in this assignment is throwaway.
 
 Use the [public weekly reference](reference.md), not private lecture/speaker notes. For
-evidence-standard parts without a personal AI session, critique the
-[HW2 supplied DNS change-plan draft](../../docs/non-ai-review-artifacts.md#hw2---dns-change-plan-draft),
-cite it, and connect the claim to your captured public DNS evidence.
+evidence-standard parts without a personal AI session, use the supplied DNS change-plan draft if it has been provided separately, cite it, and connect the claim to your captured public DNS evidence.
 
 ---
 
 ## 2. Prerequisites
 
-Before you start, confirm all five. If any fails, use the supplied transcript fallback
-and say so in your report.
+Before you start, confirm all five. If any fails, use the supplied transcript fallback and say so in your report.
 
 1. **`dig` works.** `dig -v` prints a version. Installation table in [`lab.md`](lab.md).
 2. **`curl` works.** `curl --version` on macOS/Linux or `curl.exe --version` on Windows.
@@ -57,19 +54,15 @@ dig +trace depaul.edu A
 dig +trace www.depaul.edu A
 ```
 
-Then annotate the first transcript. For **every** group in the output — starting with
-the root-hints bootstrap and ending with the terminal authoritative answer — write one
-line naming:
+Then annotate the first transcript. For **every** group in the output — starting with the root-hints bootstrap and ending with the terminal authoritative answer — write one line naming:
 
 1. which server answered,
 2. whether it gave a referral or an answer, and
 3. how you can tell from the output.
 
-The exact responding server can vary. That is normal; root, TLD, and authoritative
-roles are what matter.
+The exact responding server can vary. That is normal; root, TLD, and authoritative roles are what matter.
 
-**Deliverable:** `evidence/01-dig-trace.txt` (raw) + a report section with your
-annotation.
+**Deliverable:** `evidence/01-dig-trace.txt` (raw) + a report section with your annotation.
 
 > If `+trace` stalls, use `dig -4 +trace` and say in your report that you did, and why.
 > If it still stalls, use `samples/dig-trace-depaul.txt` as supplied evidence and label
@@ -207,10 +200,10 @@ produce all four outputs below for each. That is four faults' worth of write-up 
 For **each** fault, produce all four:
 
 1. **The annotated request/response pair** — the specific lines that carry the
-   evidence, with your annotation on each.
+evidence, with your annotation on each.
 2. **The diagnosis** — one or two sentences naming the actual cause.
 3. **The confirming request** — the `.http` request that distinguishes your diagnosis
-   from the next most plausible one, and what result confirms it.
+from the next most plausible one, and what result confirms it.
 4. **The fix** — what you would change, and where: app, proxy, platform edge, or DNS.
 
 You must also include **one curl transcript** for Fault 1A so you can connect VS Code's
